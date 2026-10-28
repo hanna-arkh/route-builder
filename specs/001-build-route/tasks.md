@@ -36,10 +36,10 @@ context,screens,components}. Документы проверки: specs/001-buil
 
 **Purpose**: Подготовить существующий starter без его повторной инициализации.
 
-- [ ] T001 Сверить `package.json`, Node >=22.13.x и strict-настройку `tsconfig.json`; перед кодом прочитать документацию Expo SDK из package.json и связанные страницы из llms.txt, записать версии и ссылки в `specs/001-build-route/verification.md`, не обновляя SDK и не меняя `server.js`.
-- [ ] T002 Установить `react-native-safe-area-context` через `npx expo install`, проверить совместимость с SDK58 и изменения `package.json` / `package-lock.json`; сохранить существующие runtime-зависимости и entry point `index.ts`.
-- [ ] T003 Настроить ESLint через Expo CLI и flat config в `eslint.config.js`, фиксируя нужные devDependencies в `package.json` / `package-lock.json`; добиться запуска `npx expo lint` без предложения первоначальной настройки, не добавляя тестовый framework.
-- [ ] T004 [P] Создать минимальные токены цветов/отступов/типографики в `src/components/theme.ts` по `designs/RouteBuilder-Screens.html`, без копирования демонстрационных контактов/количеств; предусмотреть английский LTR и области нажатия >=44×44.
+- [X] T001 Сверить `package.json`, Node >=22.13.x и strict-настройку `tsconfig.json`; перед кодом прочитать документацию Expo SDK из package.json и связанные страницы из llms.txt, записать версии и ссылки в `specs/001-build-route/verification.md`, не обновляя SDK и не меняя `server.js`.
+- [X] T002 Установить `react-native-safe-area-context` через `npx expo install`, проверить совместимость с SDK58 и изменения `package.json` / `package-lock.json`; сохранить существующие runtime-зависимости и entry point `index.ts`.
+- [X] T003 Настроить ESLint через Expo CLI и flat config в `eslint.config.js`, фиксируя нужные devDependencies в `package.json` / `package-lock.json`; добиться запуска `npx expo lint` без предложения первоначальной настройки, не добавляя тестовый framework.
+- [X] T004 [P] Создать минимальные токены цветов/отступов/типографики в `src/components/theme.ts` по `designs/RouteBuilder-Screens.html`, без копирования демонстрационных контактов/количеств; предусмотреть английский LTR и области нажатия >=44×44.
 
 **Checkpoint**: T001–T004 завершены; toolchain готова, зависимости SDK совместимы.
 T002/T003 последовательны, потому что меняют общие package.json/lock.

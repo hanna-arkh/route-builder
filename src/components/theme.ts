@@ -1,0 +1,51 @@
+// Values extracted from designs/RouteBuilder-Screens.html.
+// Use native system fonts; the mockup's custom fonts are not bundled.
+export const theme = {
+  colors: {
+    background: '#EEF1F3',
+    surface: '#FFFFFF',
+    card: '#F7FAFB',
+    primary: '#0D6E76',
+    primaryPressed: '#0A585F',
+    selected: '#E3F0F1',
+    text: '#16232E',
+    textSecondary: '#6B7C8A',
+    border: '#DFE5E9',
+    disabled: '#C3CDD4',
+    errorText: '#8A5A1E',
+    errorBorder: '#B4762A',
+    errorBackground: '#FFEDA8',
+  },
+  spacing: {
+    xs: 4,
+    sm: 6,
+    md: 8,
+    lg: 10,
+    xl: 12,
+    control: 14,
+    screen: 16,
+    section: 20,
+    xxl: 24,
+  },
+  radii: {
+    small: 8,
+    input: 10,
+    button: 12,
+    card: 16,
+    pill: 20,
+  },
+  typography: {
+    heading: { fontSize: 20, lineHeight: 28, fontWeight: '700' },
+    body: { fontSize: 15, lineHeight: 23, fontWeight: '400' },
+    label: { fontSize: 14, lineHeight: 20, fontWeight: '700' },
+    counter: { fontSize: 13, lineHeight: 18, fontWeight: '500' },
+    caption: { fontSize: 12, lineHeight: 16, fontWeight: '400' },
+  },
+  layout: {
+    direction: 'ltr',
+    writingDirection: 'ltr',
+    minTouchTarget: 44,
+    fieldHeight: 44,
+    buttonHeight: 52,
+  },
+} as const;
