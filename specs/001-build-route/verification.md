@@ -103,3 +103,98 @@ build/, *.log, .env*, временных файлов и .idea/. Публика�
 
 T001–T004 выполнены и отмечены [X]. T005–T042 остаются невыполненными.
 Следующий runtime/HTTP gate находится в T014 и не запускался в этой итерации.
+
+
+## 2026-10-28 — Phase 2 / Foundation
+
+Объем: только T005–T014. Все десять задач выполнены; T015–T042 не начинались.
+Новых зависимостей и экранов не добавлено. App.tsx временно заменен диагностическим
+starter для gate T014, как предусмотрено задачей; вывод удалить при T023.
+
+### Реализованные задачи
+
+| Задача | Результат |
+|---|---|
+| T005 | src/types/dto.ts: строгие интерфейсы двух операций API и ошибок |
+| T006 | src/types/domain.ts: Domain, readonly-черновик, состояния, ApiFailure и отмена |
+| T007 | src/config/api.ts: единый baseUrl, pageSize=50, debounce=400, timeout=10000, fallback=2 |
+| T008 | src/api/decoders.ts: unknown → DTO → Domain, nullable/строковые максимумы, null items |
+| T009 | src/api/client.ts: native fetch, HTTP/JSON/timeout, общий Retry-After cooldown, cleanup |
+| T010 | src/api/stops.ts: страницы, дедупликация, короткая страница/no-new-id, progress/resume |
+| T011 | src/api/routes.ts: один POST, проверенный 201 и сверка snapshot, unknown при расхождении |
+| T012 | src/context/validation.ts: все ошибки по id, пробелы, количества, 200 UTF-16, emoji |
+| T013 | src/context/routeBuilderReducer.ts: immutable-переходы, порядок/режимы, guards и reset |
+| T014 | src/context/RouteBuilderContext.tsx и диагностический App.tsx; iOS/HTTP gate PASS |
+
+Общий retryAt хранится также в состоянии провайдера, чтобы исправление черновика
+не снимало блокировку ожидания. browseLoaded различает пустой загруженный справочник
+и еще не загруженный кеш. Context не экспортирует submit: его подключение — T022.
+Provider отменяет GET при размонтировании; requestId защищает данные, ошибки и progress.
+Для lifecycle-флага используется layout effect, чтобы дочерний load effect корректно
+работал также при development cleanup/remount. Debounced UI-поиск остается T029.
+
+### Проверки логики без нового framework
+
+Временный скрипт `/private/tmp/route-builder-phase2-check.cjs` загружает TypeScript
+через установленный TypeScript transpiler и использует node:assert. Он не является
+новой инфраструктурой приложения. Команда `node /private/tmp/route-builder-phase2-check.cjs`
+завершилась exit 0; 11 групп PASS:
+
+1. Декодирование DTO и number/string/null packages_max, строгость обязательных полей.
+2. Пробелы, целые количества, 200/201 UTF-16, emoji/непарные суррогаты, frozen snapshot.
+3. Кодирование q с сохранением регистра, страницы 50+2 и дедупликация границы.
+4. Остановка на короткой странице и при отсутствии новых id несмотря на метаданные.
+5. Ошибка страницы и продолжение с сохраненного nextPage.
+6. Общий cooldown 429/503, Retry-After/fallback и отсутствие скрытых повторов.
+7. Отличие таймаута POST (unknown) от отмененного GET (не UI-ошибка).
+8. Невалидный JSON: protocol error; поврежденное тело 422 не скрывает HTTP-отказ.
+9. Неизмененный текст POST, сверка ответа, сохранение receivedRouteId при mismatch.
+10. Reducer: режимы/уникальность/сохранение текста, игнорирование устаревших ответов.
+11. Reducer: отправка/unknown/success guards, cooldown после правки и New route.
+
+SHA-256 временного проверочного скрипта: `09fb408b8b840d9b95f56c8ddd6d518eaf90b8fdd2a631c5a1135b02a6ad40ca`.
+Это проверка Foundation, не приемка всех SC пользовательского интерфейса.
+
+### Проверка реального server.js
+
+Сервер запущен командой `node server.js`, без правок. Клиентские функции проверены
+скриптом `/private/tmp/route-builder-phase2-live.cjs` с разрешенным localhost-доступом:
+
+- listStops: 24 уникальные точки за один GET, включая 24/7 Pharmacy.
+- createRoute: 201, id rt_2000, status draft, одна остановка; исходный текст
+  с краевыми пробелами подтвержден без изменений.
+- Автоматического повторного POST нет. Проверочный маршрут существует только
+  в памяти этого локального mock-процесса.
+
+### Обязательный iOS/HTTP gate T014
+
+| Проверка | Наблюдение |
+|---|---|
+| Runtime | iPhone 17 Pro Max Simulator, iOS 26.0 |
+| Simulator UDID | FC155EDC-25DA-4B3D-8030-F8A1DFBF7D15 |
+| Expo Go | 58.0.7, установлен Expo CLI вместо прежнего 57.0.9 |
+| Запуск | npx --no-install expo start --ios --lan |
+| API baseUrl | http://localhost:4000 (симулятор, задан через src/config/api.ts) |
+| iOS bundle | Metro: Bundled index.ts, 732 modules |
+| HTTP из приложения | Экран показывает Loaded 24 unique stops |
+| Gate | PASS; это наблюдение реального iOS-приложения, не curl |
+
+[Скриншот результата T014](evidence/phase2-ios.png).
+
+Первый запуск Metro с --localhost не дал подключения по адресу 127.0.0.1:
+localhost был доступен по IPv6, IPv4-запрос к 8081 отвергался. Перезапуск с --lan
+устранил проблему, после чего приложение загрузилось. Изменения app.json/ATS
+не потребовались. SDK не обновлялся, несмотря на информационное предложение CLI.
+Физический iPhone не проверялся; для него EXPO_PUBLIC_API_URL в конфигурации
+должен указывать LAN-IP компьютера, а не localhost.
+
+### Итоговые quality gates и границы
+
+- `npx --no-install tsc --noEmit`: PASS, exit 0.
+- `CI=1 npx --no-install expo lint`: PASS, exit 0.
+- `git diff --check`: PASS.
+- server.js SHA-256: `d213029e846a69065ff847e71875acbb6024122b1aa829851cf0351ae1a96abb` — исходная сумма сохранена.
+- index.ts неизменен; package.json/package-lock.json не менялись в Phase 2.
+- Только две штатные операции API, без дополнительных возможностей или библиотек.
+- Checklists не изменялись; до старта было 16/16. Extension hooks отсутствуют.
+- T001–T014 отмечены [X]; T015–T042 остаются [ ]. Полный UI и его SC еще не реализованы.
