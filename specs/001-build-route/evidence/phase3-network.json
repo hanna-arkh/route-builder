@@ -1,0 +1,27 @@
+[
+  {
+    "body": {
+      "stops": [
+        {
+          "instructions": "Leave at reception.",
+          "packages": 2,
+          "stop_id": "stp_1001"
+        }
+      ]
+    },
+    "response": {
+      "id": "rt_2001",
+      "status": "draft",
+      "stops": [
+        {
+          "instructions": "Leave at reception.",
+          "packages": 2,
+          "stop_id": "stp_1001"
+        }
+      ]
+    },
+    "startedAt": 1793195852365,
+    "status": 201,
+    "url": "http://localhost:4000/v1/routes"
+  }
+]

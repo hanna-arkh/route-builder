@@ -1,9 +1,30 @@
-import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useReducer, useRef, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  type ReactNode,
+} from "react";
 
-import { apiClient } from '../api/client';
-import { listStops } from '../api/stops';
-import { ApiFailure, RequestCancelled, type RouteBuilderState, type SelectionMode } from '../types/domain';
-import { createInitialState, routeBuilderReducer, type RouteBuilderAction } from './routeBuilderReducer';
+import { apiClient } from "../api/client";
+import { createRoute } from "../api/routes";
+import { validateDraft } from "./validation";
+import { draftIsLocked } from "./routeBuilderReducer";
+import { listStops } from "../api/stops";
+import {
+  ApiFailure,
+  RequestCancelled,
+  type RouteBuilderState,
+  type SelectionMode,
+} from "../types/domain";
+import {
+  createInitialState,
+  routeBuilderReducer,
+  type RouteBuilderAction,
+} from "./routeBuilderReducer";
 
 interface LoadOptions {
   query?: string;
@@ -20,18 +41,27 @@ interface RouteBuilderContextValue {
   clearInstructions: (id: string) => void;
   removeStop: (id: string) => void;
   newRoute: () => void;
+  submit: () => Promise<"invalid" | "blocked" | "success" | "failed">;
+  isInteractionLocked: () => boolean;
 }
 
-const RouteBuilderContext = createContext<RouteBuilderContextValue | null>(null);
+const RouteBuilderContext = createContext<RouteBuilderContextValue | null>(
+  null,
+);
 
 export function RouteBuilderProvider({ children }: { children: ReactNode }) {
-  const [state, reactDispatch] = useReducer(routeBuilderReducer, undefined, createInitialState);
+  const [state, reactDispatch] = useReducer(
+    routeBuilderReducer,
+    undefined,
+    createInitialState,
+  );
   // The ref tracks queued actions too, so callbacks in one event do not read a
   // pre-render snapshot. Both transitions use the same pure reducer.
   const latest = useRef(state);
   const active = useRef<AbortController | null>(null);
   const requestSequence = useRef(0);
   const mounted = useRef(true);
+  const inFlight = useRef(false);
 
   const send = useCallback((action: RouteBuilderAction) => {
     if (!mounted.current) return;
@@ -50,60 +80,143 @@ export function RouteBuilderProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const loadStops = useCallback(async (options: LoadOptions = {}) => {
-    if (!mounted.current) return;
-    const query = (options.query ?? latest.current.catalogue.query).trim();
-    active.current?.abort();
-    const requestId = ++requestSequence.current;
-    const controller = new AbortController();
-    active.current = controller;
-    const catalogue = latest.current.catalogue;
-    const progress = catalogue.progress?.query === query ? catalogue.progress : null;
-    send({ type: 'catalogueStarted', requestId, query, resume: progress !== null });
-    try {
-      if (query === '' && catalogue.browseLoaded && !options.force) {
-        send({ type: 'catalogueReady', requestId, stops: catalogue.browse });
-        return;
-      }
-      const retryAt = apiClient.getRetryAt();
-      if (retryAt !== null) throw new ApiFailure('cooldown', 'Please wait before trying again.', { retryAt });
-      const stops = await listStops(query, {
-        signal: controller.signal, progress,
-        onProgress: next => {
-          if (mounted.current && requestId === requestSequence.current) {
-            send({ type: 'catalogueProgress', requestId, progress: next });
-          }
-        },
+  const loadStops = useCallback(
+    async (options: LoadOptions = {}) => {
+      if (!mounted.current) return;
+      const query = (options.query ?? latest.current.catalogue.query).trim();
+      active.current?.abort();
+      const requestId = ++requestSequence.current;
+      const controller = new AbortController();
+      active.current = controller;
+      const catalogue = latest.current.catalogue;
+      const progress =
+        catalogue.progress?.query === query ? catalogue.progress : null;
+      send({
+        type: "catalogueStarted",
+        requestId,
+        query,
+        resume: progress !== null,
       });
-      if (mounted.current && requestId === requestSequence.current) {
-        send({ type: 'catalogueReady', requestId, stops });
+      try {
+        if (query === "" && catalogue.browseLoaded && !options.force) {
+          send({ type: "catalogueReady", requestId, stops: catalogue.browse });
+          return;
+        }
+        const retryAt = apiClient.getRetryAt();
+        if (retryAt !== null)
+          throw new ApiFailure("cooldown", "Please wait before trying again.", {
+            retryAt,
+          });
+        const stops = await listStops(query, {
+          signal: controller.signal,
+          progress,
+          onProgress: (next) => {
+            if (mounted.current && requestId === requestSequence.current) {
+              send({ type: "catalogueProgress", requestId, progress: next });
+            }
+          },
+        });
+        if (mounted.current && requestId === requestSequence.current) {
+          send({ type: "catalogueReady", requestId, stops });
+        }
+      } catch (error) {
+        if (
+          error instanceof RequestCancelled ||
+          !mounted.current ||
+          requestId !== requestSequence.current
+        )
+          return;
+        const failure =
+          error instanceof ApiFailure
+            ? error
+            : new ApiFailure("protocol", "Unable to load the stop directory.");
+        send({ type: "catalogueFailed", requestId, error: failure });
+      } finally {
+        if (active.current === controller) active.current = null;
       }
-    } catch (error) {
-      if (error instanceof RequestCancelled || !mounted.current || requestId !== requestSequence.current) return;
-      const failure = error instanceof ApiFailure ? error
-        : new ApiFailure('protocol', 'Unable to load the stop directory.');
-      send({ type: 'catalogueFailed', requestId, error: failure });
-    } finally {
-      if (active.current === controller) active.current = null;
+    },
+    [send],
+  );
+
+  const isInteractionLocked = useCallback(
+    () => inFlight.current || draftIsLocked(latest.current),
+    [],
+  );
+
+  const submit = useCallback(async (): Promise<
+    "invalid" | "blocked" | "success" | "failed"
+  > => {
+    if (!mounted.current || isInteractionLocked()) return "blocked";
+    const validation = validateDraft(latest.current.draft);
+    if (!validation.valid) {
+      send({ type: "validationFailed", validation });
+      return "invalid";
     }
-  }, [send]);
+    const now = Date.now();
+    const retryAt = Math.max(
+      latest.current.retryAt ?? 0,
+      apiClient.getRetryAt() ?? 0,
+    );
+    if (retryAt > now) return "blocked";
+    // Set before dispatch and before the first await: two calls in one frame
+    // must never issue two POSTs. The reducer also freezes the request snapshot.
+    inFlight.current = true;
+    send({ type: "submissionStarted", startedAt: now });
+    const pending = latest.current.submission;
+    if (pending.status !== "sending") {
+      inFlight.current = false;
+      return "blocked";
+    }
+    try {
+      const route = await createRoute(pending.snapshot);
+      send({ type: "submissionSucceeded", route });
+      return "success";
+    } catch (error) {
+      const failure =
+        error instanceof ApiFailure
+          ? error
+          : new ApiFailure("protocol", "The route could not be confirmed.", {
+              outcome: "unknown",
+            });
+      send({ type: "submissionFailed", error: failure });
+      return "failed";
+    } finally {
+      inFlight.current = false;
+    }
+  }, [isInteractionLocked, send]);
 
-  const actions = useMemo(() => ({
-    setMode: (mode: SelectionMode) => send({ type: 'setMode', mode }),
-    toggleStop: (id: string) => send({ type: 'toggleStop', id }),
-    savePackages: (id: string, packages: number) => send({ type: 'savePackages', id, packages }),
-    setInstructions: (id: string, text: string) => send({ type: 'setInstructions', id, text }),
-    clearInstructions: (id: string) => send({ type: 'clearInstructions', id }),
-    removeStop: (id: string) => send({ type: 'removeStop', id }),
-    newRoute: () => send({ type: 'newRoute' }),
-  }), [send]);
+  const actions = useMemo(
+    () => ({
+      setMode: (mode: SelectionMode) => send({ type: "setMode", mode }),
+      toggleStop: (id: string) => send({ type: "toggleStop", id }),
+      savePackages: (id: string, packages: number) =>
+        send({ type: "savePackages", id, packages }),
+      setInstructions: (id: string, text: string) =>
+        send({ type: "setInstructions", id, text }),
+      clearInstructions: (id: string) =>
+        send({ type: "clearInstructions", id }),
+      removeStop: (id: string) => send({ type: "removeStop", id }),
+      newRoute: () => send({ type: "newRoute" }),
+    }),
+    [send],
+  );
 
-  const value = useMemo(() => ({ state, loadStops, ...actions }), [state, loadStops, actions]);
-  return <RouteBuilderContext.Provider value={value}>{children}</RouteBuilderContext.Provider>;
+  const value = useMemo(
+    () => ({ state, loadStops, submit, isInteractionLocked, ...actions }),
+    [state, loadStops, submit, isInteractionLocked, actions],
+  );
+  return (
+    <RouteBuilderContext.Provider value={value}>
+      {children}
+    </RouteBuilderContext.Provider>
+  );
 }
 
 export function useRouteBuilder(): RouteBuilderContextValue {
   const context = useContext(RouteBuilderContext);
-  if (!context) throw new Error('useRouteBuilder must be used inside RouteBuilderProvider.');
+  if (!context)
+    throw new Error(
+      "useRouteBuilder must be used inside RouteBuilderProvider.",
+    );
   return context;
 }

@@ -198,3 +198,97 @@ localhost был доступен по IPv6, IPv4-запрос к 8081 отве�
 - Только две штатные операции API, без дополнительных возможностей или библиотек.
 - Checklists не изменялись; до старта было 16/16. Extension hooks отсутствуют.
 - T001–T014 отмечены [X]; T015–T042 остаются [ ]. Полный UI и его SC еще не реализованы.
+
+## Phase 3 — одностопный MVP, T015–T024 (2026-10-28)
+
+### Реализованный срез
+
+Добавлены StopRow, PackageQuantityModal, SelectionTray, InstructionCard и
+RequestState; StopsScreen/InstructionsScreen подключены через состояние App.tsx.
+Provider находится выше экранов, диагностический экран T014 удален. В UI доступны
+выбор/замена/снятие одной точки, количество, инструкция с N/200, Clear all,
+Back/Continue, создание маршрута и New route. Английский LTR, native StyleSheet,
+safe area, прокрутка/клавиатура и области действий не менее 44×44.
+
+Submit использует синхронный inFlight ref, reducer формирует frozen snapshot;
+201 проверяется существующим API-клиентом. sending/unknown/success запрещают
+изменения на уровне Context; навигация читает актуальную блокировку через ref.
+Подтвержденный отказ сохраняет редактируемый черновик; unknown сохраняет данные,
+блокирует правки и слепой повтор. Автоматической отправки/повторов нет.
+
+Перед изменениями прочитаны SDK 58 docs и llms.txt, официальные страницы React
+Native SectionList, TextInput, Modal, KeyboardAvoidingView. Установленные TypeScript
+типы и runtime использованы для проверки совместимости. Источники:
+https://docs.expo.dev/versions/v58.0.0/,
+https://docs.expo.dev/llms.txt,
+https://reactnative.dev/docs/sectionlist,
+https://reactnative.dev/docs/textinput,
+https://reactnative.dev/docs/modal,
+https://reactnative.dev/docs/keyboardavoidingview.
+
+### Проверки логики
+
+- `node /private/tmp/route-builder-phase2-check.cjs`: 11 групп PASS, включая DTO,
+  пагинацию, Retry-After, лимит UTF-16/emoji, сверку POST и reducer guards.
+- `node /private/tmp/route-builder-phase3-check.cjs`: PASS. Временный Node/assert
+  harness исполняет реальные функции Provider с заменами React hooks и транспорта;
+  он проверяет синхронные callbacks, не заменяет React renderer или проверку UI.
+- Пустая/пробельная инструкция: ошибка по id, 0 POST. 11 вызовов submit в одном
+  кадре: 1 вызов транспорта; snapshot и исходный текст неизменны.
+- Пока Promise отправки открыт, setMode/toggleStop/savePackages/setInstructions/
+  clearInstructions/removeStop/newRoute не меняют черновик. После success новый
+  submit блокируется; New route сбрасывает выбор/режим и сохраняет browse-кеш.
+- После 422 данные сохранены, ручной повтор доступен. После timeout/unknown данные
+  сохранены, правки и повтор отклоняются; нет скрытого повторного запроса.
+- SHA-256 harness Phase 3:
+  `7f259199ca00541c6e2a3dc9443172c0ee235c9c2c1e3a2fb11b05ae59d4cbf2`.
+
+### T024 — фактический iOS-прогон
+
+Среда: iPhone 17 Pro Max Simulator, iOS 26.0, Expo Go 58.0.7; Metro --lan,
+SDK 58.0.16 / RN 0.88.0. Прогон выполнен через native UI automation
+agent-device 0.21.33; инструмент не добавлялся в зависимости проекта.
+Это runtime-приемка, а не unit-тест и не проверка на физическом iPhone.
+
+| Проверка | Фактический результат |
+|---|---|
+| Справочник | Строки реального API, буквенные секции; # в конце; Continue (0 stops) disabled |
+| Количество | stp_1001 / North Cafe: 1 → + → 2 → Save; карточка показывает 2× |
+| Нижняя граница / Cancel | При 1 кнопка − disabled; на Almond Patisserie + → Cancel оставляет пилюлю 1 |
+| Пустая инструкция | Finish показывает ошибку на карточке; счетчик 0/200; POST отсутствует |
+| Back/Continue | Текст Leave at reception. и количество 2 сохраняются; счетчик 19/200 |
+| Быстрые нажатия | Native runner выполнил 10 нажатий Finish с intervalMs=20; захвачен ровно 1 POST |
+| sending | Snapshot: Back disabled, TextInput enabled=false, Clear all disabled; вместо Submit — Creating route… |
+| Остальные sending-действия | Выбор/количество/Remove/New route недоступны на этом экране; прямые Context-вызовы заблокированы harness-проверкой выше |
+| Реальный POST | /v1/routes, stops=[{stop_id: stp_1001, packages: 2, instructions: Leave at reception.}] |
+| Ответ | 201, id rt_2001, status draft; stops совпадают с исходным запросом |
+| success | Route created / Route ID: rt_2001; Back и редактирование заблокированы, Submit отсутствует, доступен New route |
+| Новый маршрут | One stop, пустой выбор, Continue (0 stops) disabled; справочник сохранен |
+
+Для наблюдения sending через Metro CDP временно обернут fetch **в памяти runtime
+симулятора**: перед POST установлена задержка 8 секунд, сохранены запрос/ответ.
+Запрос переслан исходному fetch и неизмененному server.js. После проверки исходный
+fetch восстановлен. Это не production-код, proxy или изменение API-клиента.
+Временные сценарии — `/private/tmp/route-builder-phase3-ui-*.json`, захват —
+`/private/tmp/route-builder-phase3-cdp.cjs`; app-код не содержит инструментирования.
+
+Артефакты: [ошибка валидации](evidence/phase3-ios-validation.png),
+[sending](evidence/phase3-ios-sending.png), [успех](evidence/phase3-ios-success.png),
+[новый маршрут](evidence/phase3-ios-new-route.png),
+[единственный POST и подтвержденный ответ](evidence/phase3-network.json).
+Последующая косметическая правка делает disabled Clear all визуально приглушенным;
+ее состояние disabled уже подтверждено native snapshot приведенного прогона.
+
+### Итог и границы Phase 3
+
+- `npx expo lint`: PASS, exit 0; `npx tsc --noEmit`: PASS, exit 0.
+- `git diff --check`: PASS.
+- server.js SHA-256 прежний:
+  `d213029e846a69065ff847e71875acbb6024122b1aa829851cf0351ae1a96abb`.
+- index.ts, package.json/package-lock.json и server.js не изменены.
+- T015–T024 отмечены [X]; T025–T042 остаются [ ]. Checklists не изменены.
+- Multi-stop UI, серверный поиск в UI, расширенные действия восстановления и
+  итоговая приемка всех SC остаются задачами следующих фаз. 20 прогонов SC-003,
+  пять участников SC-001 и физическое устройство этим этапом не проверялись.
+- Extension hooks отсутствуют; новых runtime-зависимостей нет.
+- При ручной проверке на симуляторе выявлено некорректное позиционирование футера относительно нижней границы экрана. Исправлено добавлением insets.bottom через useSafeAreaInsets до фиксации MVP.
