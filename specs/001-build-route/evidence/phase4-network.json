@@ -1,0 +1,37 @@
+[
+  {
+    "body": {
+      "stops": [
+        {
+          "instructions": "Leave at reception.",
+          "packages": 2,
+          "stop_id": "stp_1018"
+        },
+        {
+          "instructions": "Use side entrance.",
+          "packages": 4,
+          "stop_id": "stp_1022"
+        }
+      ]
+    },
+    "response": {
+      "id": "rt_2003",
+      "status": "draft",
+      "stops": [
+        {
+          "instructions": "Leave at reception.",
+          "packages": 2,
+          "stop_id": "stp_1018"
+        },
+        {
+          "instructions": "Use side entrance.",
+          "packages": 4,
+          "stop_id": "stp_1022"
+        }
+      ]
+    },
+    "startedAt": 1793265968421,
+    "status": 201,
+    "url": "http://localhost:4000/v1/routes"
+  }
+]

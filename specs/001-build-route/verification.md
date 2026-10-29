@@ -292,3 +292,91 @@ fetch восстановлен. Это не production-код, proxy или из
   пять участников SC-001 и физическое устройство этим этапом не проверялись.
 - Extension hooks отсутствуют; новых runtime-зависимостей нет.
 - При ручной проверке на симуляторе выявлено некорректное позиционирование футера относительно нижней границы экрана. Исправлено добавлением insets.bottom через useSafeAreaInsets до фиксации MVP.
+## Phase 4 — User Story 2, T025–T028 (2026-10-29)
+
+### Изменения
+
+- T025: radio-переключатель One stop / Multi-stop route связан с reducer;
+  disabled при блокировке черновика. Уникальность и порядок выбора сохраняются.
+- T026: карточки получают Remove по id; при удалении последней вызывается
+  onEmptyRoute в App.tsx и открывается Stops. Состояние соседних карточек не меняется.
+- T027: ошибки всех карточек берутся из errorsByStopId. После неуспешного Submit
+  FlatList прокручивается к первой ошибке; для еще не измеренной карточки предусмотрены
+  приблизительный offset и до пяти повторов после рендера, с очисткой таймера.
+  Редактирование текста само по себе повторную прокрутку не запускает.
+- T028: чипы и количества используют тот же черновик; Continue считает точки.
+  Back/Continue сохраняют данные, multi→one оставляет первую точку с ее данными,
+  возврат в multi не восстанавливает снятые точки.
+
+Перед изменениями прочитаны Expo SDK 58 reference, llms.txt и официальные страницы
+React Native FlatList / VirtualizedList (scrollToIndex, onScrollToIndexFailed):
+https://docs.expo.dev/versions/v58.0.0/,
+https://docs.expo.dev/llms.txt,
+https://reactnative.dev/docs/flatlist,
+https://reactnative.dev/docs/virtualizedlist.
+
+### Метод проверки и ограничения
+
+Среда: iPhone 17 Pro Max Simulator / iOS 26.0 / Expo Go 58.0.7,
+Expo SDK 58.0.16, RN 0.88.0; локальный исходный server.js на порту 4000.
+Metro --lan. Checklist до старта: 16/16 PASS, hooks отсутствуют.
+
+agent-device open и snapshot завершились таймаутами daemon (по 90 секунд),
+поэтому native tap/type automation в этом прогоне не использовалась.
+Через Metro CDP вызывались **реальные callbacks смонтированных компонентов**
+Pressable, StopRow, PackageQuantityModal, SelectionTray, InstructionCard и экранов.
+Проверялись итоговые Context/props в живом React runtime, а native UI снимался через
+xcrun simctl и визуально проверялся. Это не подмена состояния вручную и не мок API,
+но не доказательство физических нажатий, клавиатуры или удобства одной рукой.
+Эти проверки остаются частью полной приемки T037/T041.
+
+Временные скрипты: `/private/tmp/route-builder-phase4-eval.cjs`,
+`route-builder-phase4-{helpers,select,instructions,remove,send,modes}.js` в той же
+папке. В production-код они не включены. Для наблюдения sending fetch в памяти
+runtime временно задерживал POST на 3 секунды и сохранял запрос/ответ, затем
+исходный fetch был восстановлен. Клиент, baseUrl и server.js для этого не менялись.
+
+### Результаты runtime US2
+
+| Проверка | Фактический результат |
+|---|---|
+| Multi-stop выбор | Almond Patisserie (stp_1018), Ambassador Cars (stp_1020), Amber Wine Bar (stp_1022), в порядке выбора |
+| Количества / счетчик | 2/3/4 посылки, три чипа, Continue (3 stops); не 9 stops |
+| Инструкции / Back | Три разных текста; после Back/Continue все тексты и количества сохранены |
+| Clear all | Очищен только текст stp_1020; соседние тексты и количества не изменились |
+| Ошибка / прокрутка | Ошибка только stp_1020; native screenshot показывает эту карточку в начале списка; 0 POST |
+| Исправление / пробелы | Исправление снимает ошибку; строка из трех пробелов снова блокирует Submit |
+| Удаление средней | Remove stp_1020 оставляет stp_1018/stp_1022 с количествами 2/4 и их исходными текстами; Back показывает два чипа |
+| Отправка | 10 синхронных вызовов UI-обработчика Finish дают ровно один POST; это не серия физических tap |
+| Блокировки | sending запрещает Remove/Clear/изменение текста/количества/режима/Back, все карточки disabled; после success Submit отклоняется |
+| Реальный ответ | 201, rt_2003, draft; stops ровно stp_1018/stp_1022, packages 2/4, тексты совпадают; удаленная точка отсутствует |
+| Повторный выбор | Нажатие callback выбранной точки снимает ее; повторное добавление помещает в конец без дубля |
+| multi→one→multi | Сохранены первая stp_1018, packages=2, Keep first stop.; две снятые точки не восстановились |
+| Удаление последней | Instructions размонтирован, открыт Stops, selected=0, Continue disabled, browse-кеш содержит 24 точки |
+
+Артефакты: [три выбранные точки](evidence/phase4-ios-selection.png),
+[ошибка и прокрутка](evidence/phase4-ios-validation.png),
+[две оставшиеся карточки](evidence/phase4-ios-two-cards.png),
+[подтвержденный успех](evidence/phase4-ios-success.png),
+[последняя точка удалена](evidence/phase4-ios-empty-route.png),
+[запрос и ответ сервера](evidence/phase4-network.json).
+
+### Проверки логики и quality gates
+
+- `node /private/tmp/route-builder-phase4-check.cjs`: PASS. Временный Node/assert
+  harness проверяет фактический reducer/validation: порядок и уникальность,
+  снятие/добавление с новым пустым текстом, количества, ошибки по id,
+  адресные Clear/Remove, состав snapshot, sending locks, сохранность после 422,
+  multi→one→multi и пустой маршрут. Это изолированная проверка, не UI-прогон.
+- SHA-256 harness:
+  `8d74650693ec9c44cbbd824a5fff7b9da0ddcd46fc603cef767d4fc21a1dc1df`.
+- Регрессия Phase 2: 11 групп PASS. Регрессия Context Phase 3: PASS.
+- `npx expo lint`: PASS без предупреждений; `npx tsc --noEmit`: PASS.
+- `git diff --check`: PASS.
+- server.js не изменен; SHA-256:
+  `d213029e846a69065ff847e71875acbb6024122b1aa829851cf0351ae1a96abb`.
+- API/Context/reducer, package.json/lock и entry point не менялись. Новых
+  зависимостей и операций API нет. Исправленный нижний safe-area отступ сохранен.
+- T025–T028 отмечены [X]; T029–T042 не выполнялись. Checklists не изменялись.
+  Полная приемка SC, физическое устройство, 5 участников и 20 прогонов нажатий
+  не объявляются пройденными. Extension hooks отсутствуют.

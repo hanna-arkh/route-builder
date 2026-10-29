@@ -13,6 +13,9 @@ import { StopsScreen } from "./src/screens/StopsScreen";
 function RouteBuilder() {
   const [screen, setScreen] = useState<"stops" | "instructions">("stops");
   const { state, newRoute, isInteractionLocked } = useRouteBuilder();
+  const openStops = () => {
+    if (!isInteractionLocked()) setScreen("stops");
+  };
   return (
     <SafeAreaView edges={["top", "left", "right"]} style={styles.container}>
       {screen === "stops" ? (
@@ -24,9 +27,8 @@ function RouteBuilder() {
         />
       ) : (
         <InstructionsScreen
-          onBack={() => {
-            if (!isInteractionLocked()) setScreen("stops");
-          }}
+          onBack={openStops}
+          onEmptyRoute={openStops}
           onNewRoute={() => {
             if (state.submission.status !== "success") return;
             newRoute();

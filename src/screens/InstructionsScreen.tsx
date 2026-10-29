@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   FlatList,
   Keyboard,
@@ -15,18 +15,40 @@ import { RequestState } from "../components/RequestState";
 import { theme } from "../components/theme";
 import { useRouteBuilder } from "../context/RouteBuilderContext";
 import { draftIsLocked } from "../context/routeBuilderReducer";
+import type { SelectedStop } from "../types/domain";
+
+const noErrors: Readonly<Record<string, string>> = {};
 
 export function InstructionsScreen({
   onBack,
   onNewRoute,
+  onEmptyRoute,
 }: {
   onBack: () => void;
   onNewRoute: () => void;
+  onEmptyRoute: () => void;
 }) {
-  const { state, setInstructions, clearInstructions, submit } =
-    useRouteBuilder();
+  const {
+    state,
+    setInstructions,
+    clearInstructions,
+    removeStop,
+    submit,
+    isInteractionLocked,
+  } = useRouteBuilder();
   const { submission, draft } = state;
   const locked = draftIsLocked(state);
+  const list = useRef<FlatList<SelectedStop>>(null);
+  const validationRequested = useRef(false);
+  const scrollTarget = useRef<{ id: string; attempts: number } | null>(null);
+  const scrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (scrollTimer.current !== null) clearTimeout(scrollTimer.current);
+      scrollTarget.current = null;
+    },
+    [draft.selected],
+  );
   const [now, setNow] = useState(() => Date.now());
   // Enable a manual retry after the server's deadline; never submit on a timer.
   useEffect(() => {
@@ -42,10 +64,30 @@ export function InstructionsScreen({
   const errors =
     submission.status === "idle" || submission.status === "error"
       ? submission.validation.errorsByStopId
-      : {};
+      : noErrors;
+  useEffect(() => {
+    if (!validationRequested.current) return;
+    validationRequested.current = false;
+    const index = draft.selected.findIndex((item) => !!errors[item.stop.id]);
+    if (index < 0) return;
+    scrollTarget.current = { id: draft.selected[index].stop.id, attempts: 0 };
+    list.current?.scrollToIndex({ index, animated: true, viewPosition: 0 });
+  }, [submission, draft.selected, errors]);
+
   const finish = () => {
     Keyboard.dismiss();
-    void submit();
+    validationRequested.current = true;
+    void submit().then((result) => {
+      if (result !== "invalid") validationRequested.current = false;
+    });
+  };
+  const remove = (id: string) => {
+    if (isInteractionLocked()) return;
+    removeStop(id);
+    if (draft.selected.length === 1) {
+      Keyboard.dismiss();
+      onEmptyRoute();
+    }
   };
   return (
     <KeyboardAvoidingView
@@ -73,12 +115,36 @@ export function InstructionsScreen({
         <Text style={styles.subtitle}>Add instructions for every stop</Text>
       </View>
       <FlatList
+        ref={list}
         data={draft.selected}
         keyExtractor={(item) => item.stop.id}
         extraData={submission}
         contentContainerStyle={styles.list}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
+        onScrollToIndexFailed={({ averageItemLength }) => {
+          const target = scrollTarget.current;
+          if (!target || target.attempts >= 5) return;
+          const index = draft.selected.findIndex(
+            (item) => item.stop.id === target.id,
+          );
+          if (index < 0) return;
+          target.attempts += 1;
+          // Variable-height cards may not be measured outside the render window.
+          // Move near the target, then retry after FlatList renders that region.
+          list.current?.scrollToOffset({
+            offset: averageItemLength * index,
+            animated: false,
+          });
+          if (scrollTimer.current !== null) clearTimeout(scrollTimer.current);
+          scrollTimer.current = setTimeout(() => {
+            list.current?.scrollToIndex({
+              index,
+              animated: true,
+              viewPosition: 0,
+            });
+          }, 150);
+        }}
         renderItem={({ item }) => (
           <InstructionCard
             item={item}
@@ -86,6 +152,7 @@ export function InstructionsScreen({
             disabled={locked}
             onChange={(text) => setInstructions(item.stop.id, text)}
             onClear={() => clearInstructions(item.stop.id)}
+            onRemove={() => remove(item.stop.id)}
           />
         )}
       />

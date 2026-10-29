@@ -78,6 +78,7 @@ export function InstructionCard({
           accessibilityState={{ disabled }}
           disabled={disabled}
           style={[styles.action, disabled && styles.disabled]}
+          accessibilityLabel={`Remove ${item.stop.name || "Unknown stop"} from route`}
           onPress={onRemove}
         >
           <Text style={styles.actionText}>Remove from route</Text>

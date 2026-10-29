@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { SectionList, StyleSheet, Text, View } from "react-native";
+import { Pressable, SectionList, StyleSheet, Text, View } from "react-native";
 import { PackageQuantityModal } from "../components/PackageQuantityModal";
 import { RequestState } from "../components/RequestState";
 import { SelectionTray } from "../components/SelectionTray";
@@ -10,7 +10,8 @@ import { draftIsLocked } from "../context/routeBuilderReducer";
 import type { Stop } from "../types/domain";
 
 export function StopsScreen({ onContinue }: { onContinue: () => void }) {
-  const { state, loadStops, toggleStop, savePackages } = useRouteBuilder();
+  const { state, loadStops, toggleStop, savePackages, setMode } =
+    useRouteBuilder();
   const [quantityId, setQuantityId] = useState<string | null>(null);
   const { catalogue, draft } = state;
   const locked = draftIsLocked(state);
@@ -45,10 +46,39 @@ export function StopsScreen({ onContinue }: { onContinue: () => void }) {
           Route Builder
         </Text>
         <Text style={styles.subtitle}>1. Stops / 2. Instructions</Text>
-        <View style={styles.mode}>
-          <Text style={styles.modeTitle}>One stop</Text>
-          <Text style={styles.subtitle}>Select a delivery address</Text>
+        <View accessibilityRole="radiogroup" style={styles.modes}>
+          {(["one", "multi"] as const).map((mode) => (
+            <Pressable
+              key={mode}
+              accessibilityRole="radio"
+              accessibilityState={{
+                checked: draft.mode === mode,
+                disabled: locked,
+              }}
+              disabled={locked}
+              onPress={() => setMode(mode)}
+              style={[
+                styles.mode,
+                draft.mode === mode && styles.activeMode,
+                locked && styles.dim,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.modeTitle,
+                  draft.mode === mode && styles.activeModeTitle,
+                ]}
+              >
+                {mode === "one" ? "One stop" : "Multi-stop route"}
+              </Text>
+            </Pressable>
+          ))}
         </View>
+        <Text style={styles.subtitle}>
+          {draft.mode === "one"
+            ? "Select a delivery address"
+            : "Select delivery addresses"}
+        </Text>
       </View>
       {catalogue.status === "loading" || catalogue.status === "idle" ? (
         <View style={styles.state}>
@@ -123,15 +153,24 @@ const styles = StyleSheet.create({
   header: { padding: 16, gap: 8, backgroundColor: theme.colors.surface },
   heading: { ...theme.typography.heading, color: theme.colors.text },
   subtitle: { ...theme.typography.body, color: theme.colors.textSecondary },
+  modes: { flexDirection: "row", gap: 8 },
   mode: {
+    flex: 1,
+    minHeight: 52,
+    justifyContent: "center",
     padding: 14,
     borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 12,
+  },
+  activeMode: {
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.selected,
-    borderRadius: 12,
-    gap: 4,
   },
-  modeTitle: { ...theme.typography.label, color: theme.colors.primary },
+  modeTitle: { ...theme.typography.label, color: theme.colors.textSecondary },
+  activeModeTitle: { color: theme.colors.primary },
+  dim: { opacity: 0.45 },
   section: {
     paddingHorizontal: 16,
     paddingVertical: 6,
