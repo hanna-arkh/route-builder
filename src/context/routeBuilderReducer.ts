@@ -27,7 +27,7 @@ export type RouteBuilderAction =
   | { type: 'catalogueReady'; requestId: number; stops: readonly Stop[] }
   | { type: 'catalogueFailed'; requestId: number; error: ApiFailure }
   | { type: 'validationFailed'; validation: DraftValidation }
-  | { type: 'submissionStarted'; startedAt: number; confirmedUnknown?: boolean }
+  | { type: 'submissionStarted'; startedAt: number; attemptId: number; confirmedUnknown?: boolean }
   | { type: 'submissionSucceeded'; route: CreatedRoute }
   | { type: 'submissionFailed'; error: ApiFailure }
   | { type: 'newRoute' };
@@ -123,7 +123,7 @@ export function routeBuilderReducer(state: RouteBuilderState, action: RouteBuild
         && previousError.retryAt > action.startedAt) return state;
       const validation = validateDraft(state.draft);
       if (!validation.valid) return { ...state, submission: { status: 'idle', validation } };
-      return { ...state, submission: { status: 'sending', snapshot: createSnapshot(state.draft.selected), startedAt: action.startedAt } };
+      return { ...state, submission: { status: 'sending', attemptId: action.attemptId, snapshot: state.submission.status === 'unknown' ? state.submission.snapshot : createSnapshot(state.draft.selected), startedAt: action.startedAt } };
     }
     case 'submissionSucceeded':
       if (state.submission.status !== 'sending') return state;
@@ -134,7 +134,7 @@ export function routeBuilderReducer(state: RouteBuilderState, action: RouteBuild
         ...state,
         retryAt: action.error.retryAt === null ? state.retryAt : Math.max(state.retryAt ?? 0, action.error.retryAt),
         submission: action.error.outcome === 'unknown'
-          ? { status: 'unknown', snapshot: state.submission.snapshot, error: action.error, receivedRouteId: action.error.receivedRouteId }
+          ? { status: 'unknown', attemptId: state.submission.attemptId, snapshot: state.submission.snapshot, error: action.error, receivedRouteId: action.error.receivedRouteId }
           : { status: 'error', snapshot: state.submission.snapshot, error: action.error, validation: emptyValidation() },
       };
     case 'newRoute':

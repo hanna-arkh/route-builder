@@ -1,0 +1,217 @@
+[
+  {
+    "body": {
+      "stops": [
+        {
+          "instructions": "  Keep instruction 1.  ",
+          "packages": 2,
+          "stop_id": "stp_1000"
+        },
+        {
+          "instructions": "  Keep instruction 2.  ",
+          "packages": 3,
+          "stop_id": "stp_1001"
+        }
+      ]
+    },
+    "mode": "400",
+    "response": {
+      "error": "malformed_json"
+    },
+    "startedAt": 1793272363810,
+    "status": 400,
+    "synthetic": true
+  },
+  {
+    "body": {
+      "stops": [
+        {
+          "instructions": "  Keep instruction 1.  ",
+          "packages": 2,
+          "stop_id": "stp_1000"
+        },
+        {
+          "instructions": "  Keep instruction 2.  ",
+          "packages": 3,
+          "stop_id": "stp_1001"
+        }
+      ]
+    },
+    "mode": "422",
+    "response": {
+      "error": "validation_failed",
+      "fields": {
+        "stops": "required"
+      }
+    },
+    "startedAt": 1793272364462,
+    "status": 422,
+    "synthetic": true
+  },
+  {
+    "body": {
+      "stops": [
+        {
+          "instructions": "  Keep instruction 1.  ",
+          "packages": 2,
+          "stop_id": "stp_1000"
+        },
+        {
+          "instructions": "  Keep instruction 2.  ",
+          "packages": 3,
+          "stop_id": "stp_1001"
+        }
+      ]
+    },
+    "mode": "429",
+    "response": {
+      "error": "rate_limited"
+    },
+    "startedAt": 1793272398353,
+    "status": 429,
+    "synthetic": true
+  },
+  {
+    "body": {
+      "stops": [
+        {
+          "instructions": "  Corrected on cooldown.  ",
+          "packages": 2,
+          "stop_id": "stp_1000"
+        },
+        {
+          "instructions": "  Keep instruction 2.  ",
+          "packages": 3,
+          "stop_id": "stp_1001"
+        }
+      ]
+    },
+    "mode": "lost",
+    "responseDropped": true,
+    "startedAt": 1793272431448,
+    "synthetic": true,
+    "upstreamResponse": {
+      "id": "rt_2004",
+      "status": "draft",
+      "stops": [
+        {
+          "instructions": "  Corrected on cooldown.  ",
+          "packages": 2,
+          "stop_id": "stp_1000"
+        },
+        {
+          "instructions": "  Keep instruction 2.  ",
+          "packages": 3,
+          "stop_id": "stp_1001"
+        }
+      ]
+    },
+    "upstreamStatus": 201
+  },
+  {
+    "body": {
+      "stops": [
+        {
+          "instructions": "  Corrected on cooldown.  ",
+          "packages": 2,
+          "stop_id": "stp_1000"
+        },
+        {
+          "instructions": "  Keep instruction 2.  ",
+          "packages": 3,
+          "stop_id": "stp_1001"
+        }
+      ]
+    },
+    "mode": "mismatch",
+    "response": {
+      "id": "rt_2005",
+      "status": "draft",
+      "stops": [
+        {
+          "instructions": "Changed acknowledgement",
+          "packages": 2,
+          "stop_id": "stp_1000"
+        },
+        {
+          "instructions": "  Keep instruction 2.  ",
+          "packages": 3,
+          "stop_id": "stp_1001"
+        }
+      ]
+    },
+    "startedAt": 1793272475278,
+    "status": 201,
+    "synthetic": true,
+    "upstreamResponse": {
+      "id": "rt_2005",
+      "status": "draft",
+      "stops": [
+        {
+          "instructions": "  Corrected on cooldown.  ",
+          "packages": 2,
+          "stop_id": "stp_1000"
+        },
+        {
+          "instructions": "  Keep instruction 2.  ",
+          "packages": 3,
+          "stop_id": "stp_1001"
+        }
+      ]
+    },
+    "upstreamStatus": 201
+  },
+  {
+    "body": {
+      "stops": [
+        {
+          "instructions": "  Corrected on cooldown.  ",
+          "packages": 2,
+          "stop_id": "stp_1000"
+        },
+        {
+          "instructions": "  Keep instruction 2.  ",
+          "packages": 3,
+          "stop_id": "stp_1001"
+        }
+      ]
+    },
+    "mode": "normal",
+    "response": {
+      "id": "rt_2006",
+      "status": "draft",
+      "stops": [
+        {
+          "instructions": "  Corrected on cooldown.  ",
+          "packages": 2,
+          "stop_id": "stp_1000"
+        },
+        {
+          "instructions": "  Keep instruction 2.  ",
+          "packages": 3,
+          "stop_id": "stp_1001"
+        }
+      ]
+    },
+    "startedAt": 1793272518299,
+    "status": 201,
+    "synthetic": false,
+    "upstreamResponse": {
+      "id": "rt_2006",
+      "status": "draft",
+      "stops": [
+        {
+          "instructions": "  Corrected on cooldown.  ",
+          "packages": 2,
+          "stop_id": "stp_1000"
+        },
+        {
+          "instructions": "  Keep instruction 2.  ",
+          "packages": 3,
+          "stop_id": "stp_1001"
+        }
+      ]
+    },
+    "upstreamStatus": 201
+  }
+]

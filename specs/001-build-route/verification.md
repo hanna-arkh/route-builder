@@ -486,3 +486,126 @@ baseUrl, зависимости и production-код для инъекций н�
 - T029–T032 отмечены [X]. T033–T042 не выполнялись; итоговая приемка всех SC
   не объявляется завершенной. В частности, полный native UI прогон и проверка
   возврата из фона реальным системным жестом остаются непроведенными.
+
+## Phase 6 — User Story 4, T033–T036 (2026-10-29)
+
+### Изменения
+
+- T033: Retry при unknown открывает Alert с предупреждением о возможном дубле,
+  Cancel и Send again. Обычный submit при unknown по-прежнему запрещен.
+  Context.retryUnknown принимает конкретное неизвестное состояние; локальный
+  attemptId связывает согласие с попыткой. Старое окно не разрешает повтор нового
+  сбоя. attemptId — только клиентская метка, в API не отправляется.
+  Подтвержденный повтор использует исходный frozen snapshot, не текущие поля UI.
+- T034: проверены существующие guards App/Stops/Instructions и Context/reducer.
+  sending/unknown блокируют навигацию и правки; success — повтор и правки,
+  разрешая просмотр и New route. App.tsx/StopsScreen не потребовали изменения.
+- T035: RequestState показывает Retry available in N seconds, вычисляя remaining
+  от абсолютного retryAt. Пересчитывается каждую секунду и при AppState active;
+  таймеры/подписка очищаются. Исходное предупреждение остается видимым при ожидании.
+  При нуле только включается кнопка — callback автоматически не вызывается.
+- T036: отдельные сообщения для 400, 422/fields.stops и 429; подтвержденные отказы
+  оставляют черновик редактируемым. Правки не сбрасывают cooldown. Непроверенный
+  201 остается unknown с receivedRouteId; никакого скрытого повторного POST нет.
+  Submit/Retry в Instructions используют общий RequestState и один механизм deadline.
+
+Перед изменениями сверены SDK 58 reference, llms.txt, официальные Alert/AppState:
+https://docs.expo.dev/versions/v58.0.0/,
+https://docs.expo.dev/llms.txt,
+https://reactnative.dev/docs/alert,
+https://reactnative.dev/docs/appstate.
+
+### Изолированные проверки
+
+`node /private/tmp/route-builder-phase6-check.cjs`: PASS. Выполняет реальные функции
+Provider/reducer с заменами React hooks и транспорта; не является React renderer.
+Покрыты:
+
+- десять отправок одного tick дают один вызов транспорта;
+- все изменения multi-stop черновика, поиск и New route отклоняются при sending
+  и unknown; success отклоняет правки/повтор, но разрешает New route;
+- 400/422 сохраняют данные и fields, после исправления доступен новый submit;
+- 429 сохраняет retryAt при правке и блокирует раннюю отправку;
+- timeout/unknown не допускает слепой повтор; только актуальное подтверждение
+  запускает sending; повторное и устаревшее подтверждения отклоняются;
+- transport получает тот же frozen snapshot на подтвержденных повторах;
+- несовпадающий 201 сохраняет receivedRouteId; 503/unknown сохраняет cooldown;
+- успех запрещает повтор, новый маршрут сохраняет browse-кеш.
+
+SHA-256: `de29d391368ce006bd229a614a2932a92b89f507dfeb03e65d76a895a2b984cd`.
+
+`node /private/tmp/route-builder-phase6-countdown.cjs`: PASS. Реальный RequestState
+с заменами hooks, AppState и детерминированными часами: 3→2→0, актуализация часов
+после долгого idle, сохранение предупреждения при ожидании, disabled guard,
+отсутствие callback при нуле, учет времени фона, очистка таймера/подписки.
+Также проверены фактические parseRetryAt: секунды, HTTP-date, fallback 2 секунды
+при отсутствующем/невалидном заголовке.
+SHA-256: `e752aee0ccd93b43cb0f55bbdc561c4483163bb6f5d38ad67c12419a0f7d2198`.
+
+Регрессии Phase 2 (11 групп), Context Phase 3, reducer Phase 4 и поиск Phase 5 — PASS.
+
+### Независимая приемка US4 в iOS runtime
+
+Среда: iPhone 17 Pro Max Simulator / iOS 26.0 / Expo Go 58.0.7,
+Expo SDK 58.0.16 / RN 0.88.0; исходный server.js, порт 4000.
+Использованы Metro CDP и реальные callbacks смонтированных компонентов,
+Context и native screenshots через xcrun simctl, как в предыдущих фазах.
+Alert.alert временно заменен spy: проверены заголовок/предупреждение и реальные
+callbacks Cancel/Send again. **Нативное окно Alert и физические нажатия его кнопок
+этим прогоном не проверены.** AppState background/active проверен изолированным
+harness, не реальным системным жестом. Эти ограничения не подменяются PASS.
+
+Черновик: stp_1000 / Bluebell Event Hall, packages=2;
+stp_1001 / North Cafe, packages=3; разные инструкции с краевыми пробелами.
+Для контролируемых отказов fetch обернут только в памяти runtime, исходники API,
+baseUrl и server.js не менялись.
+
+| Сценарий | Наблюдение |
+|---|---|
+| 400 | Инъекция malformed_json дает подтвержденный отказ, понятное действие Review the stops; весь черновик сохранен |
+| 422 | Инъекция fields.stops=required показывает сообщение о необходимости valid stop; карточки редактируемы |
+| 429 / правка | Retry-After: 4; после изменения текста срок тот же, Finish disabled, ранний callback не создает POST; screenshot показывает 3 seconds |
+| Истечение срока | POST не появляется сам; отправка запускается только следующим явным callback |
+| sending / double-tap | Десять вызовов Finish дают один POST. Remove/Clear/ввод/Back/режим/выбор/количество/поиск/New route отклоняются; все карточки disabled |
+| Потерянный ответ | Реальный сервер создал rt_2004, затем обертка выбросила сетевую ошибку. UI показывает unknown и не знает id; успех не заявлен |
+| Cancel | Одновременно открывается один запрос подтверждения; Cancel не меняет unknown/snapshot и не отправляет POST; blind submit блокируется |
+| Подтвержденный повтор | Send again создает только один следующий POST с исходным составом/текстом |
+| Поврежденный 201 | Реальный сервер создал rt_2005; обертка изменила инструкцию в ответе. UI остается unknown и показывает Received route ID: rt_2005 |
+| Старое подтверждение | Callback прошлого Alert после нового unknown не создает POST |
+| Финальный повтор | Новое согласие получает проверенный 201 / rt_2006 / draft, stp_1000 и stp_1001, quantities 2/3, исходные тексты с пробелами |
+| Быстрые подтверждения | Десять вызовов Send again дают ровно один POST; success блокирует последующий submit и старые подтверждения |
+| New route | Открыт Stops, mode=one, выбор пуст, browse-кеш содержит 24 точки |
+
+Всего в сценарии шесть POST: три инъецированных отказа 400/422/429, один запрос
+с потерянным ответом и **два осознанно подтвержденных повтора**. Последние три
+дошли до сервера и создали rt_2004/rt_2005/rt_2006 — ожидаемая демонстрация отсутствия
+серверной идемпотентности. Это не автоматический дубль и не обещание exactly-once.
+Для трех дошедших попыток тела запросов совпадают. Сетевой журнал разделяет
+инъекции, upstreamStatus/upstreamResponse и доставленный клиенту ответ.
+
+Артефакты: [отказ 422](evidence/phase6-ios-rejected.png),
+[countdown](evidence/phase6-ios-countdown.png),
+[неизвестный исход](evidence/phase6-ios-unknown.png),
+[непроверенный 201 с id](evidence/phase6-ios-mismatch.png),
+[проверенный успех](evidence/phase6-ios-success.png),
+[POST и ответы](evidence/phase6-network.json),
+[метаданные подтверждений Alert](evidence/phase6-confirmations.json).
+Временные сценарии — `/private/tmp/route-builder-phase6-eval.cjs`,
+`route-builder-phase6-helpers.js`, `route-builder-phase6-runtime-*.js` в той же папке.
+Оригинальные fetch и Alert восстановлены, временные функции удалены из runtime.
+
+### Итоговые проверки и границы
+
+- `npx expo lint`: PASS без предупреждений; `npx tsc --noEmit`: PASS.
+- `git diff --check`: PASS.
+- server.js не изменен; SHA-256:
+  `d213029e846a69065ff847e71875acbb6024122b1aa829851cf0351ae1a96abb`.
+- Новые runtime-зависимости и операции API не добавлены; API-клиент/DTO,
+  App.tsx/StopsScreen и package.json/lock не изменены.
+- В Domain sending/unknown добавлен локальный attemptId; reducer сохраняет его
+  при unknown, Context сравнивает с подтверждаемой попыткой. Snapshot сохраняется
+  при unknown→sending; серверного ключа идемпотентности не вводится.
+- T033–T036 отмечены [X]; T037–T042 остаются [ ]. requirements.md по-прежнему 16/16,
+  не редактировался; extension hooks отсутствуют.
+- Полная приемка SC-001–SC-009, 20 native прогонов быстрых нажатий, физическое
+  устройство, native Alert и реальные системные жесты остаются непроведенными.

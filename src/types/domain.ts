@@ -99,9 +99,9 @@ export interface DraftValidation {
 
 export type SubmissionState =
   | { readonly status: 'idle'; readonly validation: DraftValidation }
-  | { readonly status: 'sending'; readonly snapshot: RouteSnapshot; readonly startedAt: number }
+  | { readonly status: 'sending'; readonly attemptId: number; readonly snapshot: RouteSnapshot; readonly startedAt: number }
   | { readonly status: 'error'; readonly snapshot: RouteSnapshot; readonly error: ApiFailure; readonly validation: DraftValidation }
-  | { readonly status: 'unknown'; readonly snapshot: RouteSnapshot; readonly error: ApiFailure; readonly receivedRouteId: string | null }
+  | { readonly status: 'unknown'; readonly attemptId: number; readonly snapshot: RouteSnapshot; readonly error: ApiFailure; readonly receivedRouteId: string | null }
   | { readonly status: 'success'; readonly route: CreatedRoute };
 
 export interface RouteBuilderState {

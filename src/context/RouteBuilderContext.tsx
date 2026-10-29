@@ -20,6 +20,7 @@ import {
   RequestCancelled,
   type RouteBuilderState,
   type SelectionMode,
+  type SubmissionState,
 } from "../types/domain";
 import {
   createInitialState,
@@ -32,6 +33,9 @@ interface LoadOptions {
   force?: boolean;
 }
 
+type UnknownSubmission = Extract<SubmissionState, { status: "unknown" }>;
+type SubmitResult = "invalid" | "blocked" | "success" | "failed";
+
 interface RouteBuilderContextValue {
   state: RouteBuilderState;
   loadStops: (options?: LoadOptions) => Promise<void>;
@@ -43,7 +47,8 @@ interface RouteBuilderContextValue {
   clearInstructions: (id: string) => void;
   removeStop: (id: string) => void;
   newRoute: () => void;
-  submit: () => Promise<"invalid" | "blocked" | "success" | "failed">;
+  submit: () => Promise<SubmitResult>;
+  retryUnknown: (expected: UnknownSubmission) => Promise<SubmitResult>;
   isInteractionLocked: () => boolean;
 }
 
@@ -64,6 +69,7 @@ export function RouteBuilderProvider({ children }: { children: ReactNode }) {
   const requestSequence = useRef(0);
   const mounted = useRef(true);
   const inFlight = useRef(false);
+  const submissionSequence = useRef(0);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const send = useCallback((action: RouteBuilderAction) => {
@@ -179,10 +185,14 @@ export function RouteBuilderProvider({ children }: { children: ReactNode }) {
     }, apiConfig.debounceMs);
   }, [isInteractionLocked, loadStops, send]);
 
-  const submit = useCallback(async (): Promise<
-    "invalid" | "blocked" | "success" | "failed"
-  > => {
-    if (!mounted.current || isInteractionLocked()) return "blocked";
+  const sendRoute = useCallback(async (expected?: UnknownSubmission): Promise<SubmitResult> => {
+    if (!mounted.current || inFlight.current) return "blocked";
+    const previous = latest.current.submission;
+    // Confirmation authorizes exactly this unknown outcome, not a later failure.
+    const confirmedUnknown = previous.status === "unknown" && expected !== undefined
+      && previous.attemptId === expected.attemptId && previous.error === expected.error;
+    if ((expected !== undefined && !confirmedUnknown)
+      || (isInteractionLocked() && !confirmedUnknown)) return "blocked";
     const validation = validateDraft(latest.current.draft);
     if (!validation.valid) {
       send({ type: "validationFailed", validation });
@@ -197,7 +207,7 @@ export function RouteBuilderProvider({ children }: { children: ReactNode }) {
     // Set before dispatch and before the first await: two calls in one frame
     // must never issue two POSTs. The reducer also freezes the request snapshot.
     inFlight.current = true;
-    send({ type: "submissionStarted", startedAt: now });
+    send({ type: "submissionStarted", startedAt: now, attemptId: ++submissionSequence.current, confirmedUnknown });
     const pending = latest.current.submission;
     if (pending.status !== "sending") {
       inFlight.current = false;
@@ -221,6 +231,9 @@ export function RouteBuilderProvider({ children }: { children: ReactNode }) {
     }
   }, [isInteractionLocked, send]);
 
+  const submit = useCallback(() => sendRoute(), [sendRoute]);
+  const retryUnknown = useCallback((expected: UnknownSubmission) => sendRoute(expected), [sendRoute]);
+
   const actions = useMemo(
     () => ({
       setMode: (mode: SelectionMode) => send({ type: "setMode", mode }),
@@ -238,8 +251,8 @@ export function RouteBuilderProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ state, loadStops, search, submit, isInteractionLocked, ...actions }),
-    [state, loadStops, search, submit, isInteractionLocked, actions],
+    () => ({ state, loadStops, search, submit, retryUnknown, isInteractionLocked, ...actions }),
+    [state, loadStops, search, submit, retryUnknown, isInteractionLocked, actions],
   );
   return (
     <RouteBuilderContext.Provider value={value}>

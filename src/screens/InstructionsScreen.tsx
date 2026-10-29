@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import {
+  Alert,
   FlatList,
   Keyboard,
   KeyboardAvoidingView,
@@ -15,9 +16,18 @@ import { RequestState } from "../components/RequestState";
 import { theme } from "../components/theme";
 import { useRouteBuilder } from "../context/RouteBuilderContext";
 import { draftIsLocked } from "../context/routeBuilderReducer";
-import type { SelectedStop } from "../types/domain";
+import type { ApiFailure, SelectedStop } from "../types/domain";
 
 const noErrors: Readonly<Record<string, string>> = {};
+
+function rejectionMessage(error: ApiFailure): string {
+  if (error.httpStatus === 400) return "The service could not accept this route. Review the stops and instructions, then retry. Your draft is saved.";
+  if (error.httpStatus === 422) return error.fields.stops === "required"
+    ? "The service requires at least one valid stop. Review your selected stops and instructions, then retry. Your draft is saved."
+    : "Review the stops, package quantities and instructions before retrying. Your draft is saved.";
+  if (error.httpStatus === 429 || error.kind === "cooldown") return "Too many requests. Your draft is saved. Retry when the wait ends.";
+  return "The route was not accepted. Your draft is saved. Review the details and try again.";
+}
 
 export function InstructionsScreen({
   onBack,
@@ -34,12 +44,14 @@ export function InstructionsScreen({
     clearInstructions,
     removeStop,
     submit,
+    retryUnknown,
     isInteractionLocked,
   } = useRouteBuilder();
   const { submission, draft } = state;
   const locked = draftIsLocked(state);
   const list = useRef<FlatList<SelectedStop>>(null);
   const validationRequested = useRef(false);
+  const confirmationOpen = useRef(false);
   const scrollTarget = useRef<{ id: string; attempts: number } | null>(null);
   const scrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
@@ -49,18 +61,6 @@ export function InstructionsScreen({
     },
     [draft.selected],
   );
-  const [now, setNow] = useState(() => Date.now());
-  // Enable a manual retry after the server's deadline; never submit on a timer.
-  useEffect(() => {
-    const currentTime = Date.now();
-    if (!state.retryAt) return;
-    const timer = setTimeout(
-      () => setNow(Date.now()),
-      Math.max(0, Math.min(state.retryAt - currentTime + 1, 2147483647)),
-    );
-    return () => clearTimeout(timer);
-  }, [state.retryAt]);
-  const coolingDown = (state.retryAt ?? 0) > now;
   const errors =
     submission.status === "idle" || submission.status === "error"
       ? submission.validation.errorsByStopId
@@ -80,6 +80,20 @@ export function InstructionsScreen({
     void submit().then((result) => {
       if (result !== "invalid") validationRequested.current = false;
     });
+  };
+  const confirmRetry = () => {
+    if (submission.status !== "unknown" || confirmationOpen.current) return;
+    confirmationOpen.current = true;
+    const release = () => { confirmationOpen.current = false; };
+    Alert.alert(
+      "Send this route again?",
+      "The previous request may already have created a route. Sending again can create a duplicate. Only continue if you accept this risk.",
+      [
+        { text: "Cancel", style: "cancel", onPress: release },
+        { text: "Send again", onPress: () => { release(); void retryUnknown(submission); } },
+      ],
+      { cancelable: true, onDismiss: release },
+    );
   };
   const remove = (id: string) => {
     if (isInteractionLocked()) return;
@@ -169,21 +183,13 @@ export function InstructionsScreen({
           <RequestState
             kind="error"
             title="Route outcome unknown"
-            message="Your route may already have been created. Your instructions are saved. Do not send it again without checking for a duplicate."
+            message={`Your route may already have been created. Repeating can create a duplicate. Your instructions are saved.${submission.receivedRouteId ? ` Received route ID: ${submission.receivedRouteId}. Its details could not be confirmed.` : ""}`}
+            retryAt={state.retryAt}
+            actionLabel="Retry"
+            onAction={confirmRetry}
           />
         ) : (
           <>
-            {submission.status === "error" && (
-              <RequestState
-                kind="error"
-                title="Route was not created"
-                message={
-                  coolingDown
-                    ? "Please wait before trying again. Your instructions are saved."
-                    : "Your instructions are saved. Check your connection or details and try again."
-                }
-              />
-            )}
             {submission.status === "idle" &&
               submission.validation.routeError && (
                 <Text accessibilityRole="alert" style={styles.error}>
@@ -193,19 +199,16 @@ export function InstructionsScreen({
             {submission.status === "sending" ? (
               <RequestState kind="loading" title="Creating route…" />
             ) : (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{ disabled: locked || coolingDown }}
-                disabled={locked || coolingDown}
-                onPress={finish}
-                style={[styles.finish, (locked || coolingDown) && styles.dim]}
-              >
-                <Text style={styles.finishText}>
-                  {submission.status === "error"
-                    ? "Retry"
-                    : "Finish instructions"}
-                </Text>
-              </Pressable>
+              <RequestState
+                compact
+                kind={submission.status === "error" ? "error" : "idle"}
+                title={submission.status === "error" ? "Route was not created" : undefined}
+                message={submission.status === "error" ? rejectionMessage(submission.error) : undefined}
+                retryAt={state.retryAt}
+                actionLabel={submission.status === "error" ? "Retry" : "Finish instructions"}
+                onAction={finish}
+                disabled={locked}
+              />
             )}
           </>
         )}
@@ -240,15 +243,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: theme.colors.border,
   },
-  finish: {
-    minHeight: 52,
-    padding: 14,
-    backgroundColor: theme.colors.primary,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  finishText: { ...theme.typography.label, color: theme.colors.surface },
   dim: { opacity: 0.45 },
   error: { color: theme.colors.errorText, ...theme.typography.body },
 });

@@ -1,0 +1,41 @@
+[
+  {
+    "buttons": [
+      {
+        "style": "cancel",
+        "text": "Cancel"
+      },
+      {
+        "text": "Send again"
+      }
+    ],
+    "message": "The previous request may already have created a route. Sending again can create a duplicate. Only continue if you accept this risk.",
+    "title": "Send this route again?"
+  },
+  {
+    "buttons": [
+      {
+        "style": "cancel",
+        "text": "Cancel"
+      },
+      {
+        "text": "Send again"
+      }
+    ],
+    "message": "The previous request may already have created a route. Sending again can create a duplicate. Only continue if you accept this risk.",
+    "title": "Send this route again?"
+  },
+  {
+    "buttons": [
+      {
+        "style": "cancel",
+        "text": "Cancel"
+      },
+      {
+        "text": "Send again"
+      }
+    ],
+    "message": "The previous request may already have created a route. Sending again can create a duplicate. Only continue if you accept this risk.",
+    "title": "Send this route again?"
+  }
+]
