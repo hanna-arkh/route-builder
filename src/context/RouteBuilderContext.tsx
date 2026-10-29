@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { apiConfig } from "../config/api";
 import { apiClient } from "../api/client";
 import { createRoute } from "../api/routes";
 import { validateDraft } from "./validation";
@@ -34,6 +35,7 @@ interface LoadOptions {
 interface RouteBuilderContextValue {
   state: RouteBuilderState;
   loadStops: (options?: LoadOptions) => Promise<void>;
+  search: (text: string) => void;
   setMode: (mode: SelectionMode) => void;
   toggleStop: (id: string) => void;
   savePackages: (id: string, packages: number) => void;
@@ -62,6 +64,7 @@ export function RouteBuilderProvider({ children }: { children: ReactNode }) {
   const requestSequence = useRef(0);
   const mounted = useRef(true);
   const inFlight = useRef(false);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const send = useCallback((action: RouteBuilderAction) => {
     if (!mounted.current) return;
@@ -77,12 +80,17 @@ export function RouteBuilderProvider({ children }: { children: ReactNode }) {
       mounted.current = false;
       requestSequence.current += 1;
       active.current?.abort();
+      if (searchTimer.current !== null) clearTimeout(searchTimer.current);
     };
   }, []);
 
   const loadStops = useCallback(
     async (options: LoadOptions = {}) => {
       if (!mounted.current) return;
+      if (searchTimer.current !== null) {
+        clearTimeout(searchTimer.current);
+        searchTimer.current = null;
+      }
       const query = (options.query ?? latest.current.catalogue.query).trim();
       active.current?.abort();
       const requestId = ++requestSequence.current;
@@ -98,12 +106,13 @@ export function RouteBuilderProvider({ children }: { children: ReactNode }) {
         resume: progress !== null,
       });
       try {
-        if (query === "" && catalogue.browseLoaded && !options.force) {
+        if (query === "" && catalogue.browseLoaded && !options.force
+          && catalogue.status !== "error" && progress === null) {
           send({ type: "catalogueReady", requestId, stops: catalogue.browse });
           return;
         }
-        const retryAt = apiClient.getRetryAt();
-        if (retryAt !== null)
+        const retryAt = Math.max(latest.current.retryAt ?? 0, apiClient.getRetryAt() ?? 0);
+        if (retryAt > Date.now())
           throw new ApiFailure("cooldown", "Please wait before trying again.", {
             retryAt,
           });
@@ -142,6 +151,33 @@ export function RouteBuilderProvider({ children }: { children: ReactNode }) {
     () => inFlight.current || draftIsLocked(latest.current),
     [],
   );
+
+  const search = useCallback((text: string) => {
+    if (!mounted.current || isInteractionLocked()) return;
+    const query = text.trim();
+    const catalogue = latest.current.catalogue;
+    if (query === catalogue.query && catalogue.status !== "idle") return;
+    if (searchTimer.current !== null) clearTimeout(searchTimer.current);
+    searchTimer.current = null;
+    active.current?.abort();
+    // Invalidate responses immediately, including the 400ms debounce window.
+    const requestId = ++requestSequence.current;
+    send({ type: "catalogueStarted", requestId, query, resume: false });
+    if (query === "" && catalogue.browseLoaded) {
+      send({ type: "catalogueReady", requestId, stops: catalogue.browse });
+      return;
+    }
+    const retryAt = Math.max(latest.current.retryAt ?? 0, apiClient.getRetryAt() ?? 0);
+    if (retryAt > Date.now()) {
+      send({ type: "catalogueFailed", requestId,
+        error: new ApiFailure("cooldown", "Please wait before trying again.", { retryAt }) });
+      return;
+    }
+    searchTimer.current = setTimeout(() => {
+      searchTimer.current = null;
+      if (mounted.current && requestId === requestSequence.current) void loadStops({ query });
+    }, apiConfig.debounceMs);
+  }, [isInteractionLocked, loadStops, send]);
 
   const submit = useCallback(async (): Promise<
     "invalid" | "blocked" | "success" | "failed"
@@ -202,8 +238,8 @@ export function RouteBuilderProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ state, loadStops, submit, isInteractionLocked, ...actions }),
-    [state, loadStops, submit, isInteractionLocked, actions],
+    () => ({ state, loadStops, search, submit, isInteractionLocked, ...actions }),
+    [state, loadStops, search, submit, isInteractionLocked, actions],
   );
   return (
     <RouteBuilderContext.Provider value={value}>

@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  AppState,
   Pressable,
   StyleSheet,
   Text,
@@ -14,14 +16,41 @@ export function RequestState({
   actionLabel,
   onAction,
   disabled = false,
+  retryAt = null,
+  emptyKind = "directory",
 }: {
   kind: "loading" | "error" | "empty" | "success";
-  title: string;
+  title?: string;
   message?: string;
   actionLabel?: string;
   onAction?: () => void;
   disabled?: boolean;
+  retryAt?: number | null;
+  emptyKind?: "directory" | "search";
 }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (retryAt === null) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const refresh = () => {
+      const currentTime = Date.now();
+      setNow(currentTime);
+      if (retryAt > currentTime) timer = setTimeout(refresh, Math.min(retryAt - currentTime + 1, 2147483647));
+    };
+    timer = setTimeout(refresh, Math.max(0, Math.min(retryAt - Date.now() + 1, 2147483647)));
+    const subscription = AppState.addEventListener("change", state => {
+      if (state === "active") { clearTimeout(timer); refresh(); }
+    });
+    return () => { clearTimeout(timer); subscription.remove(); };
+  }, [retryAt]);
+  const waiting = retryAt !== null && retryAt > now;
+  const unavailable = disabled || waiting;
+  const heading = waiting ? "Waiting to retry" : title ?? (
+    kind === "empty" ? (emptyKind === "search" ? "No stop found" : "No stops available")
+      : kind === "loading" ? "Loading stops…" : kind === "error" ? "Unable to load stops" : "Route created"
+  );
+  const detail = waiting ? "Please wait before trying again. Your selection is saved."
+    : message ?? (kind === "empty" ? (emptyKind === "search" ? "Try a different name, street, or phone." : "The stop directory is empty.") : undefined);
   return (
     <View
       style={styles.container}
@@ -30,7 +59,7 @@ export function RequestState({
     >
       {kind === "loading" && (
         <ActivityIndicator
-          accessibilityLabel={title}
+          accessibilityLabel={heading}
           color={theme.colors.primary}
         />
       )}
@@ -38,16 +67,16 @@ export function RequestState({
         accessibilityRole={kind === "error" ? "alert" : "header"}
         style={[styles.title, kind === "error" && styles.error]}
       >
-        {title}
+        {heading}
       </Text>
-      {!!message && <Text style={styles.message}>{message}</Text>}
+      {!!detail && <Text style={styles.message}>{detail}</Text>}
       {actionLabel && onAction && (
         <Pressable
           accessibilityRole="button"
-          accessibilityState={{ disabled }}
-          disabled={disabled}
-          onPress={onAction}
-          style={[styles.button, disabled && styles.disabled]}
+          accessibilityState={{ disabled: unavailable }}
+          disabled={unavailable}
+          onPress={() => { if (!unavailable) onAction(); }}
+          style={[styles.button, unavailable && styles.disabled]}
         >
           <Text style={styles.buttonText}>{actionLabel}</Text>
         </Pressable>

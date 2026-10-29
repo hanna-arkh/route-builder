@@ -1,0 +1,131 @@
+[
+  {
+    "deliveredAt": 1793270840536,
+    "ids": null,
+    "itemsNull": false,
+    "page": "1",
+    "pageSize": "50",
+    "q": "North Cafe",
+    "startedAt": 1793270839239,
+    "status": 503,
+    "synthetic": false
+  },
+  {
+    "deliveredAt": 1793270842592,
+    "ids": [
+      "stp_1001"
+    ],
+    "itemsNull": false,
+    "page": "1",
+    "pageSize": "50",
+    "q": "North Cafe",
+    "startedAt": 1793270842584,
+    "status": 200,
+    "synthetic": false
+  },
+  {
+    "deliveredAt": 1793270843284,
+    "ids": [
+      "stp_1001"
+    ],
+    "itemsNull": false,
+    "page": "1",
+    "pageSize": "50",
+    "q": "North Cafe",
+    "startedAt": 1793270843271,
+    "status": 200,
+    "synthetic": false
+  },
+  {
+    "deliveredAt": 1793270862547,
+    "ids": null,
+    "itemsNull": true,
+    "page": "1",
+    "pageSize": "50",
+    "q": "north cafe",
+    "startedAt": 1793270862460,
+    "status": 200,
+    "synthetic": false
+  },
+  {
+    "deliveredAt": 1793270863105,
+    "ids": null,
+    "itemsNull": false,
+    "page": "1",
+    "pageSize": "50",
+    "q": "0188",
+    "startedAt": 1793270863099,
+    "status": 500,
+    "synthetic": false
+  },
+  {
+    "deliveredAt": 1793270863207,
+    "ids": [
+      "stp_1001"
+    ],
+    "itemsNull": false,
+    "page": "1",
+    "pageSize": "50",
+    "q": "0188",
+    "startedAt": 1793270863201,
+    "status": 200,
+    "synthetic": false
+  },
+  {
+    "deliveredAt": 1793270863791,
+    "ids": null,
+    "itemsNull": true,
+    "page": "1",
+    "pageSize": "50",
+    "q": "__no_such_stop__",
+    "startedAt": 1793270863783,
+    "status": 200,
+    "synthetic": false
+  },
+  {
+    "deliveredAt": 1793270905977,
+    "ids": [
+      "stp_1001"
+    ],
+    "itemsNull": false,
+    "page": "1",
+    "pageSize": "50",
+    "q": "North Cafe",
+    "startedAt": 1793270904268,
+    "status": 200,
+    "synthetic": false
+  },
+  {
+    "deliveredAt": 1793270904806,
+    "ids": null,
+    "itemsNull": true,
+    "page": "1",
+    "pageSize": "50",
+    "q": "__newest_missing__",
+    "startedAt": 1793270904800,
+    "status": 200,
+    "synthetic": false
+  },
+  {
+    "deliveredAt": 1793270943286,
+    "ids": null,
+    "itemsNull": false,
+    "page": "1",
+    "pageSize": "50",
+    "q": "__rate_limit_test__",
+    "startedAt": 1793270943284,
+    "status": 429,
+    "synthetic": true
+  },
+  {
+    "deliveredAt": 1793270979843,
+    "ids": null,
+    "itemsNull": true,
+    "page": "1",
+    "pageSize": "50",
+    "q": "__after_limit__",
+    "startedAt": 1793270979835,
+    "status": 200,
+    "synthetic": false
+  }
+]

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, SectionList, StyleSheet, Text, View } from "react-native";
+import { Keyboard, Pressable, SectionList, StyleSheet, Text, TextInput, View } from "react-native";
 import { PackageQuantityModal } from "../components/PackageQuantityModal";
 import { RequestState } from "../components/RequestState";
 import { SelectionTray } from "../components/SelectionTray";
@@ -10,13 +10,19 @@ import { draftIsLocked } from "../context/routeBuilderReducer";
 import type { Stop } from "../types/domain";
 
 export function StopsScreen({ onContinue }: { onContinue: () => void }) {
-  const { state, loadStops, toggleStop, savePackages, setMode } =
+  const { state, loadStops, toggleStop, savePackages, setMode, search } =
     useRouteBuilder();
   const [quantityId, setQuantityId] = useState<string | null>(null);
   const { catalogue, draft } = state;
   const locked = draftIsLocked(state);
+  const [query, setQuery] = useState(catalogue.query);
+  const changeQuery = (text: string) => {
+    if (locked) return;
+    setQuery(text);
+    search(text);
+  };
   useEffect(() => {
-    void loadStops({ query: "" });
+    void loadStops();
   }, [loadStops]);
   const sections = useMemo(() => {
     const groups = new Map<string, Stop[]>();
@@ -79,17 +85,42 @@ export function StopsScreen({ onContinue }: { onContinue: () => void }) {
             ? "Select a delivery address"
             : "Select delivery addresses"}
         </Text>
+        <View style={styles.search}>
+          <TextInput
+            accessibilityLabel="Search stops"
+            accessibilityHint="Search by name, street, or phone"
+            accessibilityState={{ disabled: locked }}
+            editable={!locked}
+            value={query}
+            onChangeText={changeQuery}
+            placeholder="Search by name, street, or phone"
+            placeholderTextColor={theme.colors.textSecondary}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
+            onSubmitEditing={Keyboard.dismiss}
+            style={styles.searchInput}
+          />
+          {query.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Clear search"
+            accessibilityState={{ disabled: locked }} disabled={locked}
+            onPress={() => changeQuery("")} style={styles.clearSearch}>
+            <Text style={styles.clearText}>Clear</Text>
+          </Pressable>}
+        </View>
       </View>
       {catalogue.status === "loading" || catalogue.status === "idle" ? (
         <View style={styles.state}>
-          <RequestState kind="loading" title="Loading stops…" />
+          <RequestState kind="loading" title={catalogue.query ? "Searching stops…" : "Loading stops…"} />
         </View>
       ) : catalogue.status === "error" ? (
         <View style={styles.state}>
           <RequestState
             kind="error"
             title="Unable to load stops"
-            message="Check your connection and try again."
+            message={catalogue.error?.kind === "network"
+              ? "Check your connection and try again. Your selection is saved."
+              : catalogue.error?.message ?? "Check your connection and try again."}
+            retryAt={state.retryAt}
             actionLabel="Retry"
             onAction={() => {
               void loadStops();
@@ -102,6 +133,8 @@ export function StopsScreen({ onContinue }: { onContinue: () => void }) {
           keyExtractor={(item) => item.id}
           extraData={draft.selected}
           stickySectionHeadersEnabled
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           renderSectionHeader={({ section }) => (
             <Text accessibilityRole="header" style={styles.section}>
               {section.title}
@@ -122,8 +155,7 @@ export function StopsScreen({ onContinue }: { onContinue: () => void }) {
           ListEmptyComponent={
             <RequestState
               kind="empty"
-              title="No stops available"
-              message="The stop directory is empty."
+              emptyKind={catalogue.query ? "search" : "directory"}
             />
           }
         />
@@ -178,5 +210,9 @@ const styles = StyleSheet.create({
     ...theme.typography.label,
     color: theme.colors.textSecondary,
   },
+  search: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: theme.colors.border, borderRadius: 10, backgroundColor: theme.colors.card, paddingHorizontal: 12 },
+  searchInput: { flex: 1, minHeight: 44, paddingVertical: 10, ...theme.typography.body, color: theme.colors.text, writingDirection: "ltr", textAlign: "left" },
+  clearSearch: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
+  clearText: { ...theme.typography.label, color: theme.colors.primary },
   state: { flex: 1, justifyContent: "center" },
 });

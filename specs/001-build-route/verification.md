@@ -380,3 +380,109 @@ runtime временно задерживал POST на 3 секунды и со
 - T025–T028 отмечены [X]; T029–T042 не выполнялись. Checklists не изменялись.
   Полная приемка SC, физическое устройство, 5 участников и 20 прогонов нажатий
   не объявляются пройденными. Extension hooks отсутствуют.
+
+## Phase 5 — User Story 3, T029–T032 (2026-10-29)
+
+### Изменения
+
+- T029: Context.search(text) обрезает края q, сохраняет регистр и делает debounce
+  400 мс. Старый GET отменяется, requestId меняется **до** ожидания debounce,
+  поэтому его data/error/progress не могут изменить новое состояние.
+  Таймер отменяется при новом поиске, ручной загрузке и размонтировании Provider.
+- T030: контролируемый TextInput Search by name, street, or phone и Clear search.
+  Фильтрация полностью серверная. Поле/очистка недоступны при блокировке черновика.
+- T031: RequestState различает No stop found / No stops available, loading и error.
+  При Retry-After показывает Waiting to retry и disabled Retry; после абсолютного
+  deadline кнопка включается, но запрос автоматически не запускается. Возврат
+  приложения в active пересчитывает доступность; таймер/подписка очищаются.
+  Полный countdown T035 не реализовывался.
+- T032: Retry использует сохраненный progress/nextPage; другой query начинает
+  заново. Старый browse-кеш не маскирует ошибку повторной загрузки справочника.
+  Очистка поиска мгновенно возвращает кеш без GET, сохраняя черновик и cooldown.
+
+Перед изменениями сверены установленный Expo ~58.0.16, SDK reference, llms.txt
+и официальные страницы TextInput / AppState:
+https://docs.expo.dev/versions/v58.0.0/,
+https://docs.expo.dev/llms.txt,
+https://reactnative.dev/docs/textinput,
+https://reactnative.dev/docs/appstate.
+
+### Изолированная проверка Context и транспорта
+
+`node /private/tmp/route-builder-phase5-check.cjs`: пять групп PASS.
+Harness использует фактические функции Provider/reducer с заменами React hooks,
+listStops и детерминированными таймерами. Это проверка callbacks и состояния,
+не React renderer и не подтверждение живого сервера.
+
+1. До 399 мс запроса нет; на 400 мс идет q=North Cafe без краевых пробелов.
+   Запрос отменяется сразу при новом q. Его поздние data/progress игнорируются
+   даже до следующего GET; пустая выдача и очистка не меняют объект черновика.
+2. Серия A→B→C дает только C; поздняя ошибка старого запроса не меняет error,
+   status или retryAt. Ошибка следующей страницы сохраняет progress, явный Retry
+   передает тот же nextPage/collected, успех очищает progress.
+3. При ошибке обновления browse сохраненный старый кеш не подменяет Retry:
+   продолжается неудавшаяся страница. Новый query сбрасывает progress.
+4. 429 блокирует Retry и новые q до общего срока; очистка может показать кеш,
+   не обходя сетевой cooldown. Истечение срока не отправляет GET; ручной Retry
+   начинает новый query с первой страницы, инструкции сохраняются.
+5. 503 восстанавливается только ручным повтором; размонтирование отменяет debounce
+   и не допускает новых вызовов или изменений состояния.
+
+SHA-256 harness:
+`bc1367f6f7f0f33deea9d69d720ba0740df6c1e23dcabd967b0603b7ff2b02d5`.
+Регрессия Phase 2: 11 групп PASS; проверки Context Phase 3 и reducer Phase 4: PASS.
+Пагинация реального API-клиента (50+2, дедупликация, ошибка страницы и resume)
+покрыта неизмененной проверкой Phase 2; нынешний сервер содержит только 24 точки.
+
+### Фактический iOS / live server прогон
+
+iPhone 17 Pro Max Simulator, iOS 26.0, Expo Go 58.0.7, SDK 58.0.16 / RN 0.88.0.
+Как в Phase 4, использованы Metro CDP, реальные callbacks смонтированных компонентов
+и native screenshots через xcrun simctl. Нативные tap/type, открытая клавиатура,
+физическое устройство и удобство одной рукой этим методом не подтверждаются.
+Повторный запуск зависавшего в Phase 4 agent-device не требовался.
+
+| Сценарий | Наблюдение |
+|---|---|
+| North Cafe | GET page=1&page_size=50&q=North+Cafe; результат stp_1001 |
+| Выбор / Back | Выбрана North Cafe, инструкция Keep during search.; Back сохраняет текст и выбор |
+| Регистр | north cafe → 200 / items=null / No stop found |
+| Телефон | 0188 → stp_1001; локальная фильтрация не использовалась |
+| Пустая выдача | __no_such_stop__ → 200 / items=null; виден No stop found, чип/Continue сохранены |
+| Реальный 503 | Неизмененный сервер вернул 503; следующий явный Retry из проверочного драйвера начался спустя более 2 с после ответа |
+| Реальный 500 | На запросе 0188 получен 500; явный Retry из драйвера получил 200 |
+| Очистка | 24 точки восстановлены из browse-кеша без дополнительного GET |
+| Обратный порядок | В runtime старый North Cafe задержан; новый __newest_missing__ доставлен раньше. Поздний старый ответ не заменил query/results/status |
+| Инъекция 429 | Ответ с Retry-After: 3 создан только проверочной оберткой fetch; Waiting to retry, Retry disabled, смена q и ранний Retry не дают GET |
+| После срока | Сам deadline не создал запрос. Нажатие callback включенной Retry загрузило новый q; очистка восстановила 24 точки |
+| Сохранность | Во всех сценариях stp_1001 и Keep during search. сохранены |
+
+В runtime временно записывались GET-запросы, задерживался один старый ответ и
+инъецировался один 429. В [сетевом журнале](evidence/phase5-network.json)
+`synthetic: false` обозначает ответы реального сервера, `true` — инъекцию.
+Для обратного порядка у старого запроса deliveredAt=1793270905977,
+у нового deliveredAt=1793270904806. Во время 503/500 **проверочный драйвер** явно
+вызывал UI callback Retry; приложение автоматических повторов не содержит.
+Исходный fetch восстановлен, временные функции удалены из runtime. server.js,
+baseUrl, зависимости и production-код для инъекций не менялись.
+
+Временные сценарии: `/private/tmp/route-builder-phase5-eval.cjs`,
+`route-builder-phase5-helpers.js`, `route-builder-phase5-runtime-*.js` в той же папке.
+Артефакты: [результат поиска](evidence/phase5-ios-search.png),
+[пустой поиск](evidence/phase5-ios-empty-search.png),
+[после позднего ответа](evidence/phase5-ios-late-response.png),
+[ожидание Retry](evidence/phase5-ios-waiting.png),
+[справочник восстановлен](evidence/phase5-ios-restored.png).
+
+### Итоговые проверки и границы
+
+- `npx expo lint`: PASS без предупреждений; `npx tsc --noEmit`: PASS.
+- `git diff --check`: PASS.
+- server.js не изменен; SHA-256:
+  `d213029e846a69065ff847e71875acbb6024122b1aa829851cf0351ae1a96abb`.
+- Изменены только Context, StopsScreen, RequestState и материалы проверки/задач.
+  API-клиент, reducer, DTO/Domain, App.tsx и package.json/lock не изменены.
+- Checklist requirements.md: 16/16, не менялся; extension hooks отсутствуют.
+- T029–T032 отмечены [X]. T033–T042 не выполнялись; итоговая приемка всех SC
+  не объявляется завершенной. В частности, полный native UI прогон и проверка
+  возврата из фона реальным системным жестом остаются непроведенными.
