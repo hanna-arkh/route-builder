@@ -1,0 +1,16 @@
+{
+  "keyboardVisible": true,
+  "keyboard": {
+    "height": 345,
+    "screenX": 0,
+    "screenY": 611,
+    "width": 440
+  },
+  "button": {
+    "height": 52,
+    "width": 408,
+    "x": 16,
+    "y": 462.9999885559082
+  },
+  "buttonToKeyboard": 96.0000114440918
+}

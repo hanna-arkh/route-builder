@@ -1,0 +1,4 @@
+{"time":"2026-10-29T12:34:34.085Z","mode":"mismatch","incomingPosts":0,"upstreamPosts":0,"event":"listening","port":4001}
+{"time":"2026-10-29T12:35:11.644Z","mode":"mismatch","incomingPosts":1,"upstreamPosts":0,"number":1,"method":"POST","pathname":"/v1/routes","event":"received"}
+{"time":"2026-10-29T12:35:11.654Z","mode":"mismatch","incomingPosts":1,"upstreamPosts":1,"number":1,"method":"POST","pathname":"/v1/routes","event":"upstream","code":201}
+{"time":"2026-10-29T12:35:11.655Z","mode":"mismatch","incomingPosts":1,"upstreamPosts":1,"number":1,"method":"POST","pathname":"/v1/routes","event":"delivered","code":201,"applied":true}

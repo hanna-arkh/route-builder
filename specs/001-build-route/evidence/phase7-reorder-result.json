@@ -1,0 +1,8 @@
+{
+  "ids": [
+    "stp_1001"
+  ],
+  "mode": "reorder",
+  "query": "North Cafe",
+  "result": "latest kept; inspect proxy log for canceled old response"
+}

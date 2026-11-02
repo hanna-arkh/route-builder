@@ -1,0 +1,10 @@
+{
+  "draftRetained": true,
+  "initial": {
+    "httpStatus": 200,
+    "kind": "protocol",
+    "query": "North Cafe"
+  },
+  "mode": "malformed",
+  "recovered": true
+}

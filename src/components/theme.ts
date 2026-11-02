@@ -1,4 +1,4 @@
-// Values extracted from designs/RouteBuilder-Screens.html.
+// Base values from designs/RouteBuilder-Screens.html; secondary text darkened for readability.
 // Use native system fonts; the mockup's custom fonts are not bundled.
 export const theme = {
   colors: {
@@ -9,7 +9,7 @@ export const theme = {
     primaryPressed: '#0A585F',
     selected: '#E3F0F1',
     text: '#16232E',
-    textSecondary: '#6B7C8A',
+    textSecondary: '#586B7A',
     border: '#DFE5E9',
     disabled: '#C3CDD4',
     errorText: '#8A5A1E',

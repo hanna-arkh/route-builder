@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Keyboard, Pressable, SectionList, StyleSheet, Text, TextInput, View } from "react-native";
+import { Keyboard, KeyboardAvoidingView, Platform, Pressable, SectionList, StyleSheet, Text, TextInput, View } from "react-native";
 import { PackageQuantityModal } from "../components/PackageQuantityModal";
 import { RequestState } from "../components/RequestState";
 import { SelectionTray } from "../components/SelectionTray";
@@ -45,46 +45,52 @@ export function StopsScreen({ onContinue }: { onContinue: () => void }) {
   const quantityItem = draft.selected.find(
     (item) => item.stop.id === quantityId,
   );
-  return (
-    <View style={styles.screen}>
-      <View style={styles.header}>
+  const stopCount = draft.selected.length;
+  const packageCount = draft.selected.reduce((total, item) => total + item.packages, 0);
+  const canOpenInstructions = !locked && stopCount > 0;
+  const header = (
+    <View style={styles.header}>
+      <View style={styles.routeHeading}>
         <Text accessibilityRole="header" style={styles.heading}>
-          Route Builder
+          Morning route — Central area
         </Text>
-        <Text style={styles.subtitle}>1. Stops / 2. Instructions</Text>
+        <Text style={styles.subtitle}>
+          {packageCount} {packageCount === 1 ? "package" : "packages"} | {stopCount} {stopCount === 1 ? "stop" : "stops"}
+        </Text>
+      </View>
+      <View accessibilityRole="tablist" style={styles.tabs}>
+        <View accessible accessibilityRole="tab" accessibilityLabel="Stops"
+          accessibilityState={{ selected: true }} style={[styles.tab, styles.activeTab]}>
+          <Text style={styles.activeTabText}>Stops</Text>
+        </View>
+        <Pressable accessibilityRole="tab" accessibilityLabel="Instructions"
+          accessibilityState={{ selected: false, disabled: !canOpenInstructions }}
+          disabled={!canOpenInstructions}
+          onPress={() => { if (canOpenInstructions) { Keyboard.dismiss(); onContinue(); } }}
+          style={styles.tab}>
+          <Text style={styles.inactiveTabText}>Instructions</Text>
+        </Pressable>
+      </View>
+      <View style={styles.controls}>
         <View accessibilityRole="radiogroup" style={styles.modes}>
           {(["one", "multi"] as const).map((mode) => (
             <Pressable
               key={mode}
               accessibilityRole="radio"
-              accessibilityState={{
-                checked: draft.mode === mode,
-                disabled: locked,
-              }}
+              accessibilityState={{ checked: draft.mode === mode, disabled: locked }}
               disabled={locked}
               onPress={() => setMode(mode)}
-              style={[
-                styles.mode,
-                draft.mode === mode && styles.activeMode,
-                locked && styles.dim,
-              ]}
+              style={[styles.mode, draft.mode === mode && styles.activeMode, locked && styles.dim]}
             >
-              <Text
-                style={[
-                  styles.modeTitle,
-                  draft.mode === mode && styles.activeModeTitle,
-                ]}
-              >
+              <Text style={[styles.modeTitle, draft.mode === mode && styles.activeModeText]}>
                 {mode === "one" ? "One stop" : "Multi-stop route"}
+              </Text>
+              <Text style={[styles.modeSubtitle, draft.mode === mode && styles.activeModeText]}>
+                {mode === "one" ? "Single delivery" : "Several stops"}
               </Text>
             </Pressable>
           ))}
         </View>
-        <Text style={styles.subtitle}>
-          {draft.mode === "one"
-            ? "Select a delivery address"
-            : "Select delivery addresses"}
-        </Text>
         <View style={styles.search}>
           <TextInput
             accessibilityLabel="Search stops"
@@ -101,65 +107,65 @@ export function StopsScreen({ onContinue }: { onContinue: () => void }) {
             onSubmitEditing={Keyboard.dismiss}
             style={styles.searchInput}
           />
-          {query.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Clear search"
-            accessibilityState={{ disabled: locked }} disabled={locked}
-            onPress={() => changeQuery("")} style={styles.clearSearch}>
-            <Text style={styles.clearText}>Clear</Text>
-          </Pressable>}
+          {query.length > 0 && (
+            <Pressable accessibilityRole="button" accessibilityLabel="Clear search"
+              accessibilityState={{ disabled: locked }} disabled={locked}
+              onPress={() => changeQuery("")} style={styles.clearSearch}>
+              <Text style={styles.clearText}>Clear</Text>
+            </Pressable>
+          )}
+          <View accessible={false} pointerEvents="none" style={styles.searchIcon}>
+            <View style={styles.searchLens} />
+            <View style={styles.searchHandle} />
+          </View>
         </View>
       </View>
-      {catalogue.status === "loading" || catalogue.status === "idle" ? (
-        <View style={styles.state}>
-          <RequestState kind="loading" title={catalogue.query ? "Searching stops…" : "Loading stops…"} />
-        </View>
-      ) : catalogue.status === "error" ? (
-        <View style={styles.state}>
-          <RequestState
-            kind="error"
-            title="Unable to load stops"
-            message={catalogue.error?.kind === "network"
-              ? "Check your connection and try again. Your selection is saved."
-              : catalogue.error?.message ?? "Check your connection and try again."}
-            retryAt={state.retryAt}
-            actionLabel="Retry"
-            onAction={() => {
-              void loadStops();
-            }}
+    </View>
+  );
+  return (
+    <KeyboardAvoidingView
+      style={styles.screen}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <SectionList
+        sections={catalogue.status === "ready" ? sections : []}
+        ListHeaderComponent={header}
+        contentContainerStyle={styles.content}
+        keyExtractor={(item) => item.id}
+        extraData={draft.selected}
+        stickySectionHeadersEnabled
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        renderSectionHeader={({ section }) => (
+          <Text accessibilityRole="header" style={styles.section}>
+            {section.title}
+          </Text>
+        )}
+        renderItem={({ item }) => (
+          <StopRow
+            stop={item}
+            packages={
+              draft.selected.find((selected) => selected.stop.id === item.id)
+                ?.packages
+            }
+            disabled={locked}
+            showCheckbox={draft.mode === "multi"}
+            onSelect={() => toggleStop(item.id)}
+            onQuantity={() => setQuantityId(item.id)}
           />
-        </View>
-      ) : (
-        <SectionList
-          sections={sections}
-          keyExtractor={(item) => item.id}
-          extraData={draft.selected}
-          stickySectionHeadersEnabled
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          renderSectionHeader={({ section }) => (
-            <Text accessibilityRole="header" style={styles.section}>
-              {section.title}
-            </Text>
-          )}
-          renderItem={({ item }) => (
-            <StopRow
-              stop={item}
-              packages={
-                draft.selected.find((selected) => selected.stop.id === item.id)
-                  ?.packages
-              }
-              disabled={locked}
-              onSelect={() => toggleStop(item.id)}
-              onQuantity={() => setQuantityId(item.id)}
-            />
-          )}
-          ListEmptyComponent={
-            <RequestState
-              kind="empty"
-              emptyKind={catalogue.query ? "search" : "directory"}
-            />
-          }
-        />
-      )}
+        )}
+        ListEmptyComponent={
+          <View style={styles.state}>
+            {catalogue.status === "loading" || catalogue.status === "idle" ? (
+              <RequestState kind="loading" title={catalogue.query ? "Searching stops…" : "Loading stops…"} />
+            ) : catalogue.status === "error" ? (
+              <RequestState kind="error" title="Unable to load stops"
+                message={catalogue.error?.kind === "network" ? "Check your connection and try again. Your selection is saved." : catalogue.error?.message}
+                retryAt={state.retryAt} actionLabel="Retry" onAction={() => { void loadStops(); }} />
+            ) : <RequestState kind="empty" emptyKind={catalogue.query ? "search" : "directory"} />}
+          </View>
+        }
+      />
       <SelectionTray
         selected={draft.selected}
         disabled={locked}
@@ -177,31 +183,27 @@ export function StopsScreen({ onContinue }: { onContinue: () => void }) {
           }}
         />
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  header: { padding: 16, gap: 8, backgroundColor: theme.colors.surface },
-  heading: { ...theme.typography.heading, color: theme.colors.text },
-  subtitle: { ...theme.typography.body, color: theme.colors.textSecondary },
-  modes: { flexDirection: "row", gap: 8 },
-  mode: {
-    flex: 1,
-    minHeight: 52,
-    justifyContent: "center",
-    padding: 14,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 12,
-  },
-  activeMode: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.selected,
-  },
-  modeTitle: { ...theme.typography.label, color: theme.colors.textSecondary },
-  activeModeTitle: { color: theme.colors.primary },
+  header: { backgroundColor: theme.colors.surface },
+  routeHeading: { paddingHorizontal: 16, paddingVertical: 12, gap: 4 },
+  heading: { ...theme.typography.heading, fontWeight: "800", color: theme.colors.text },
+  subtitle: { ...theme.typography.caption, color: theme.colors.textSecondary },
+  tabs: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  tab: { flex: 1, minHeight: 46, padding: 10, alignItems: "center", justifyContent: "center", borderBottomWidth: 3, borderBottomColor: "transparent" },
+  activeTab: { borderBottomColor: theme.colors.primary },
+  activeTabText: { ...theme.typography.label, color: theme.colors.primary },
+  inactiveTabText: { ...theme.typography.label, color: theme.colors.textSecondary },
+  controls: { paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
+  modes: { flexDirection: "row", borderWidth: 1, borderColor: theme.colors.border, borderRadius: 12, padding: 4 },
+  mode: { flex: 1, minHeight: 52, paddingHorizontal: 8, paddingVertical: 7, borderRadius: 9, justifyContent: "center", alignItems: "center" },
+  activeMode: { backgroundColor: theme.colors.primary },
+  modeTitle: { fontSize: 15, lineHeight: 20, fontWeight: "700", textAlign: "center", color: theme.colors.text },
+  modeSubtitle: { fontSize: 11, lineHeight: 15, fontWeight: "400", textAlign: "center", color: theme.colors.textSecondary },
+  activeModeText: { color: theme.colors.surface },
   dim: { opacity: 0.45 },
   section: {
     paddingHorizontal: 16,
@@ -210,9 +212,13 @@ const styles = StyleSheet.create({
     ...theme.typography.label,
     color: theme.colors.textSecondary,
   },
-  search: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: theme.colors.border, borderRadius: 10, backgroundColor: theme.colors.card, paddingHorizontal: 12 },
-  searchInput: { flex: 1, minHeight: 44, paddingVertical: 10, ...theme.typography.body, color: theme.colors.text, writingDirection: "ltr", textAlign: "left" },
+  search: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: theme.colors.border, borderRadius: 12, backgroundColor: theme.colors.surface, paddingHorizontal: 14, gap: 8 },
+  searchInput: { flex: 1, minHeight: 46, paddingVertical: 10, fontSize: 14, lineHeight: 20, color: theme.colors.text, writingDirection: "ltr", textAlign: "left" },
+  searchIcon: { width: 18, height: 18 },
+  searchLens: { width: 12, height: 12, borderRadius: 6, borderWidth: 1.6, borderColor: theme.colors.textSecondary },
+  searchHandle: { position: "absolute", left: 10, top: 12, width: 8, height: 1.6, backgroundColor: theme.colors.textSecondary, transform: [{ rotate: "45deg" }] },
   clearSearch: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
   clearText: { ...theme.typography.label, color: theme.colors.primary },
-  state: { flex: 1, justifyContent: "center" },
+  content: { flexGrow: 1 },
+  state: { flexGrow: 1, minHeight: 180, justifyContent: "center" },
 });

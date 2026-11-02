@@ -1,0 +1,295 @@
+{
+  "sourceFiles": 18,
+  "imports": [
+    {
+      "file": "src/api/client.ts",
+      "source": "../config/api"
+    },
+    {
+      "file": "src/api/client.ts",
+      "source": "../types/domain"
+    },
+    {
+      "file": "src/api/client.ts",
+      "source": "./decoders"
+    },
+    {
+      "file": "src/api/decoders.ts",
+      "source": "../types/domain"
+    },
+    {
+      "file": "src/api/decoders.ts",
+      "source": "../types/dto"
+    },
+    {
+      "file": "src/api/routes.ts",
+      "source": "../types/domain"
+    },
+    {
+      "file": "src/api/routes.ts",
+      "source": "../types/dto"
+    },
+    {
+      "file": "src/api/routes.ts",
+      "source": "./client"
+    },
+    {
+      "file": "src/api/routes.ts",
+      "source": "./decoders"
+    },
+    {
+      "file": "src/api/stops.ts",
+      "source": "../config/api"
+    },
+    {
+      "file": "src/api/stops.ts",
+      "source": "../types/domain"
+    },
+    {
+      "file": "src/api/stops.ts",
+      "source": "./client"
+    },
+    {
+      "file": "src/api/stops.ts",
+      "source": "./decoders"
+    },
+    {
+      "file": "src/components/InstructionCard.tsx",
+      "source": "react"
+    },
+    {
+      "file": "src/components/InstructionCard.tsx",
+      "source": "react-native"
+    },
+    {
+      "file": "src/components/InstructionCard.tsx",
+      "source": "../context/validation"
+    },
+    {
+      "file": "src/components/InstructionCard.tsx",
+      "source": "../types/domain"
+    },
+    {
+      "file": "src/components/InstructionCard.tsx",
+      "source": "./theme"
+    },
+    {
+      "file": "src/components/PackageQuantityModal.tsx",
+      "source": "react"
+    },
+    {
+      "file": "src/components/PackageQuantityModal.tsx",
+      "source": "react-native"
+    },
+    {
+      "file": "src/components/PackageQuantityModal.tsx",
+      "source": "react-native-safe-area-context"
+    },
+    {
+      "file": "src/components/PackageQuantityModal.tsx",
+      "source": "../context/validation"
+    },
+    {
+      "file": "src/components/PackageQuantityModal.tsx",
+      "source": "../types/domain"
+    },
+    {
+      "file": "src/components/PackageQuantityModal.tsx",
+      "source": "./theme"
+    },
+    {
+      "file": "src/components/RequestState.tsx",
+      "source": "react"
+    },
+    {
+      "file": "src/components/RequestState.tsx",
+      "source": "react-native"
+    },
+    {
+      "file": "src/components/RequestState.tsx",
+      "source": "./theme"
+    },
+    {
+      "file": "src/components/SelectionTray.tsx",
+      "source": "react-native"
+    },
+    {
+      "file": "src/components/SelectionTray.tsx",
+      "source": "react-native-safe-area-context"
+    },
+    {
+      "file": "src/components/SelectionTray.tsx",
+      "source": "../types/domain"
+    },
+    {
+      "file": "src/components/SelectionTray.tsx",
+      "source": "./theme"
+    },
+    {
+      "file": "src/components/StopRow.tsx",
+      "source": "react"
+    },
+    {
+      "file": "src/components/StopRow.tsx",
+      "source": "react-native"
+    },
+    {
+      "file": "src/components/StopRow.tsx",
+      "source": "../types/domain"
+    },
+    {
+      "file": "src/components/StopRow.tsx",
+      "source": "./theme"
+    },
+    {
+      "file": "src/context/RouteBuilderContext.tsx",
+      "source": "react"
+    },
+    {
+      "file": "src/context/RouteBuilderContext.tsx",
+      "source": "../config/api"
+    },
+    {
+      "file": "src/context/RouteBuilderContext.tsx",
+      "source": "../api/client"
+    },
+    {
+      "file": "src/context/RouteBuilderContext.tsx",
+      "source": "../api/routes"
+    },
+    {
+      "file": "src/context/RouteBuilderContext.tsx",
+      "source": "./validation"
+    },
+    {
+      "file": "src/context/RouteBuilderContext.tsx",
+      "source": "./routeBuilderReducer"
+    },
+    {
+      "file": "src/context/RouteBuilderContext.tsx",
+      "source": "../api/stops"
+    },
+    {
+      "file": "src/context/RouteBuilderContext.tsx",
+      "source": "../types/domain"
+    },
+    {
+      "file": "src/context/RouteBuilderContext.tsx",
+      "source": "./routeBuilderReducer"
+    },
+    {
+      "file": "src/context/routeBuilderReducer.ts",
+      "source": "../types/domain"
+    },
+    {
+      "file": "src/context/routeBuilderReducer.ts",
+      "source": "./validation"
+    },
+    {
+      "file": "src/context/validation.ts",
+      "source": "../types/domain"
+    },
+    {
+      "file": "src/screens/InstructionsScreen.tsx",
+      "source": "react"
+    },
+    {
+      "file": "src/screens/InstructionsScreen.tsx",
+      "source": "react-native"
+    },
+    {
+      "file": "src/screens/InstructionsScreen.tsx",
+      "source": "react-native-safe-area-context"
+    },
+    {
+      "file": "src/screens/InstructionsScreen.tsx",
+      "source": "../components/InstructionCard"
+    },
+    {
+      "file": "src/screens/InstructionsScreen.tsx",
+      "source": "../components/RequestState"
+    },
+    {
+      "file": "src/screens/InstructionsScreen.tsx",
+      "source": "../components/theme"
+    },
+    {
+      "file": "src/screens/InstructionsScreen.tsx",
+      "source": "../context/RouteBuilderContext"
+    },
+    {
+      "file": "src/screens/InstructionsScreen.tsx",
+      "source": "../context/routeBuilderReducer"
+    },
+    {
+      "file": "src/screens/InstructionsScreen.tsx",
+      "source": "../types/domain"
+    },
+    {
+      "file": "src/screens/StopsScreen.tsx",
+      "source": "react"
+    },
+    {
+      "file": "src/screens/StopsScreen.tsx",
+      "source": "react-native"
+    },
+    {
+      "file": "src/screens/StopsScreen.tsx",
+      "source": "react-native-safe-area-context"
+    },
+    {
+      "file": "src/screens/StopsScreen.tsx",
+      "source": "../components/PackageQuantityModal"
+    },
+    {
+      "file": "src/screens/StopsScreen.tsx",
+      "source": "../components/RequestState"
+    },
+    {
+      "file": "src/screens/StopsScreen.tsx",
+      "source": "../components/SelectionTray"
+    },
+    {
+      "file": "src/screens/StopsScreen.tsx",
+      "source": "../components/StopRow"
+    },
+    {
+      "file": "src/screens/StopsScreen.tsx",
+      "source": "../components/theme"
+    },
+    {
+      "file": "src/screens/StopsScreen.tsx",
+      "source": "../context/RouteBuilderContext"
+    },
+    {
+      "file": "src/screens/StopsScreen.tsx",
+      "source": "../context/routeBuilderReducer"
+    },
+    {
+      "file": "src/screens/StopsScreen.tsx",
+      "source": "../types/domain"
+    }
+  ],
+  "requests": [
+    {
+      "file": "src/api/routes.ts",
+      "path": "/v1/routes"
+    },
+    {
+      "file": "src/api/stops.ts",
+      "path": "/v1/stops"
+    }
+  ],
+  "runtimeDependencies": {
+    "expo": "~58.0.16",
+    "expo-status-bar": "~58.0.3",
+    "react": "19.3.0",
+    "react-native": "0.88.0",
+    "react-native-safe-area-context": "~5.10.1"
+  },
+  "noUiFetchOrDto": true,
+  "noApiUiImports": true,
+  "noConsoleLogging": true,
+  "serverUnchanged": true,
+  "dependenciesUnchanged": true
+}

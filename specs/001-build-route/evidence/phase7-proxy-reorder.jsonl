@@ -1,0 +1,8 @@
+{"time":"2026-10-29T12:27:22.261Z","mode":"reorder","incomingPosts":0,"upstreamPosts":0,"event":"listening","port":4001}
+{"time":"2026-10-29T12:30:55.505Z","mode":"reorder","incomingPosts":0,"upstreamPosts":0,"number":1,"method":"GET","pathname":"/v1/stops","event":"received"}
+{"time":"2026-10-29T12:30:55.514Z","mode":"reorder","incomingPosts":0,"upstreamPosts":0,"number":1,"method":"GET","pathname":"/v1/stops","event":"upstream","code":200}
+{"time":"2026-10-29T12:30:55.599Z","mode":"reorder","incomingPosts":0,"upstreamPosts":0,"number":1,"method":"GET","pathname":"/v1/stops","event":"client_cancelled"}
+{"time":"2026-10-29T12:30:56.021Z","mode":"reorder","incomingPosts":0,"upstreamPosts":0,"number":2,"method":"GET","pathname":"/v1/stops","event":"received"}
+{"time":"2026-10-29T12:30:56.023Z","mode":"reorder","incomingPosts":0,"upstreamPosts":0,"number":2,"method":"GET","pathname":"/v1/stops","event":"upstream","code":200}
+{"time":"2026-10-29T12:30:56.023Z","mode":"reorder","incomingPosts":0,"upstreamPosts":0,"number":2,"method":"GET","pathname":"/v1/stops","event":"delivered","code":200,"applied":false}
+{"time":"2026-10-29T12:30:57.016Z","mode":"reorder","incomingPosts":0,"upstreamPosts":0,"number":1,"method":"GET","pathname":"/v1/stops","event":"not_delivered","code":200,"applied":true}

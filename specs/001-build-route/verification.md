@@ -1,5 +1,11 @@
 # Verification: Route Builder
 
+> Актуализация 2026-11-02: по указанию пользователя групповая проверка с пятью
+> участниками отменена. SC-001/T041 теперь предусматривают один контрольный прогон;
+> старые записи о пяти участниках ниже являются историей, а не текущим условием.
+> Пользователь также подтвердил достаточность iOS Simulator: физический iPhone
+> не является гейтом. Актуальный статус см. в последнем разделе отчёта.
+
 ## 2026-10-28 — Phase 1 / Setup
 
 Разрешенный объем этой итерации: T001–T004. Foundation, экраны и приемка iOS
@@ -609,3 +615,385 @@ baseUrl и server.js не менялись.
   не редактировался; extension hooks отсутствуют.
 - Полная приемка SC-001–SC-009, 20 native прогонов быстрых нажатий, физическое
   устройство, native Alert и реальные системные жесты остаются непроведенными.
+
+## Phase 7 — Polish & Cross-Cutting Concerns (2026-10-29)
+
+**T038, T039, T040, T042 завершены. T037 и T041 выполнены частично и оставлены
+[ ]: не проведены проверка стоя одной рукой на физическом устройстве и SC-001
+с пятью участниками; native tap/type и экранная клавиатура проверены не полностью.**
+Критерии не ослаблены и полная приемка приложения не объявляется пройденной.
+
+### T037 — выполненные изменения интерфейса
+
+- Заголовок/режимы/поиск Stops перенесены в ListHeaderComponent: при большом
+  Dynamic Type прокручиваются вместе со справочником, не вытесняют его из окна.
+- Оба экрана используют KeyboardAvoidingView с верхним safe-area offset.
+  Instructions прокручивает сфокусированный TextInput по его реальным координатам
+  внутри viewport списка; после keyboardDidShow повторяет измерение. Удаление
+  карточки завершает ввод, клавиатура не остается привязана к удаленному полю.
+- Селектор количества ограничен 90% высоты и прокручивается. Длинное имя не делает
+  Save/Cancel недоступными. Footer Instructions ограничен 45% окна и прокручивается:
+  при большом шрифте длинное предупреждение не вытесняет Retry за пределы экрана.
+- Полезный текст не обрезается количеством строк; ряды карточки могут переноситься.
+  Только декоративные инициалы ограничены multiplier=1.5, имя/адрес масштабируются.
+- Ошибка инструкции включена в accessibilityHint, 200/200 сопровождается явным
+  Character limit reached (200). Сохранены английский LTR и touch targets >=44.
+- Вторичный текст затемнен до #586B7A: контраст на основных фонах 4.5:1 или выше,
+  фактические значения — [contrast report](evidence/phase7-text-contrast.json).
+
+На iPhone 17 Pro Max Simulator / iOS 26.0 / Expo Go 58.0.7 программно включался
+accessibility-extra-large. Проверены перенос длинного имени Roma Pizza, прокрутка
+к полю, доступ к Save/Cancel и Retry. Потом исходная категория large восстановлена.
+Native измерения девяти рамок на финальном Stops дают не менее 44×44:
+[touch targets](evidence/phase7-touch-targets.json). Это проверка геометрии рамок,
+не полный аудит hit-testing/VoiceOver и не доказательство удобства одной рукой.
+
+Артефакты: [крупный Stops](evidence/phase7-ios-large-stops.png),
+[фокус длинной карточки](evidence/phase7-ios-focused-large.png),
+[крупный селектор](evidence/phase7-ios-modal-large.png),
+[прокрученный footer](evidence/phase7-ios-footer-large.png),
+[финальный обычный размер](evidence/phase7-ios-final.png).
+
+agent-device снова завершился daemon request timeout; daemon остановлен штатной
+командой. Основные действия выполнялись реальными callbacks смонтированных
+компонентов через Metro CDP. Программный focus показал курсор и позволил измерить
+поле; системная экранная клавиатура не появилась, поэтому сценарий с ней остается
+непроверенным. Это не заменено утверждением о физическом вводе/работе стоя.
+
+Документация перед изменениями: Expo SDK 58 reference / llms.txt,
+https://reactnative.dev/docs/keyboardavoidingview,
+https://reactnative.dev/docs/text,
+https://reactnative.dev/docs/scrollview.
+Точный тип ref TextInput сверялся с установленным RN 0.88: ComponentRef<typeof TextInput>.
+Нативные каталоги и app.json не менялись.
+
+### T038 — архитектура и диагностика
+
+`node /private/tmp/route-builder-phase7-audit.cjs`: PASS.
+[Полный аудит импортов](evidence/phase7-architecture-audit.json) подтверждает:
+UI не вызывает fetch/не импортирует DTO; API не импортирует Context/UI; только
+GET /v1/stops и POST /v1/routes; нет console-логирования контактов, инструкций
+или raw JSON. Pure validation helpers остаются общими, сетевой логики в UI нет.
+Runtime dependencies равны HEAD: expo, expo-status-bar, react, react-native,
+react-native-safe-area-context. package.json/package-lock.json и entry point неизменны.
+server.js SHA-256: `d213029e846a69065ff847e71875acbb6024122b1aa829851cf0351ae1a96abb`.
+
+### T039 — README
+
+Создан [README.md](../../README.md): Node >=22.13.x, npm ci, node server.js,
+npx expo start, проверенный npx expo start --ios --lan, EXPO_PUBLIC_API_URL,
+LAN-IP для iPhone/localhost для симулятора, разделение Metro/API, шаги использования,
+преднамеренные ошибки mock API, проверки и ограничения приемки. Новые ATS-исключения
+не понадобились; использованы ранее подтвержденные runtime/HTTP результаты T014.
+
+### T040 — contract smoke свежего неизмененного сервера
+
+`node /private/tmp/route-builder-phase7-smoke.cjs`: PASS.
+Для каждой группы запущен **отдельный свежий node server.js 4002** — поддерживаемый
+сервером аргумент порта, без модификаций. Текущий процесс на 4000 не перезапускался,
+его маршруты/счетчики не смешивались со smoke. Собственные временные процессы
+останавливались после группы. Все запросы этой проверки прямые, не через прокси.
+
+- 24 уникальные точки; total=25, total_pages=0, has_more=true.
+- North Cafe дает stp_1001; zzzzzz и north cafe дают items=null.
+- Незавершенный JSON `{` дает 400 malformed_json; stops=[] — 422 / fields.stops=required.
+- Валидный POST дает 201 / rt_2000 / draft с исходным составом.
+- Инструкция из 201 единицы обрезается сервером до 200 UTF-16.
+- После нового запуска GET №9 — 500 / request_id=req_9, №14 — 503 / Retry-After: 2.
+- После еще одного нового запуска запрос №31 — 429 / Retry-After >0.
+
+[Ответы и последовательности](evidence/phase7-contract-smoke.json),
+[точный исходник smoke](evidence/phase7-contract-smoke.cjs.txt).
+Это подтверждает контракт, но само по себе не поведение UI.
+
+### T041 — выполненные сценарии временного прокси
+
+Создан `/private/tmp/route-builder-fault-proxy.cjs` только на встроенных модулях Node.
+Upstream фиксирован на 4000, входящий порт 4001, --mode обязателен. Перезапуск
+сбрасывает счетчики; slow-create действует на каждый POST, reorder — на оба
+указанных q, остальные инъекции — на первый подходящий запрос. Логи содержат
+номера/метод/pathname/время/код/счетчики/режим, без q, контактов и тел инструкций.
+При остановке закрываются upstream/клиентские подключения и таймеры.
+
+Точный исходник и воспроизведение:
+
+```bash
+cp specs/001-build-route/evidence/phase7-fault-proxy.cjs.txt /private/tmp/route-builder-fault-proxy.cjs
+node /private/tmp/route-builder-fault-proxy.cjs --mode slow-create
+```
+
+SHA-256: `b8c004c823993cf1d7de18c2b31016f059bc8588ce0669eccb00ee36a3513be7`.
+Другие допустимые режимы перечислены в quickstart.md §4.1. Сервисных endpoint
+не добавлено. На время прогона менялся только fallback baseUrl в src/config/api.ts
+на 4001, после проверки точный исходный файл с портом 4000 восстановлен.
+[Native runtime подтвердил восстановленный URL](evidence/phase7-touch-targets.json).
+
+| Режим | Фактическое наблюдение / результат |
+|---|---|
+| slow-create | 20 серий по 10 синхронных UI callbacks Finish; 20 проверенных success с разными id; ровно 20 incoming POST, 20 upstream POST и 20 POST в Network inspector |
+| rate-limit | Первый GET — контролируемый 429 / Retry-After: 3; ранний Retry и новый q не вызывают GET; явный повтор после срока восстанавливает выдачу и черновик |
+| unavailable | Контролируемый 503 / Retry-After: 2; error отличим от empty; явный повтор восстанавливает данные |
+| malformed | Первый GET — контролируемый HTTP 200 с `{`; protocol error, не empty; повтор восстановился после дополнительного реального upstream 503 и следующего явного Retry |
+| reorder | Оба upstream ответа 200; старый клиентский запрос отменен, прокси зафиксировал client_cancelled/not_delivered. Последняя выдача North Cafe сохранена. Старый ответ **не объявляется полученным клиентом** |
+| mismatch | Первый POST создал rt_2027, прокси добавил ! в подтвержденную инструкцию; UI unknown, id сохранен, скрытого POST нет. Явное подтверждение драйвером получило rt_2028 |
+| lost-create | Первый POST создал rt_2029; прокси удерживал ответ 12 секунд, клиент получил timeout/unknown около 10 секунд, без второго POST. После отдельного явного согласия драйвера создан rt_2030 |
+
+[20 результатов и счетчики](evidence/phase7-20-runs.json),
+[Network inspector этих 20 попыток](evidence/phase7-20-network-inspector.json),
+[полный inspector trace](evidence/phase7-network-inspector.json).
+Inspector включен настоящей CDP-командой Network.enable, события Network.requestWillBeSent
+и Network.responseReceived получены из iOS runtime. Фильтруются тела и q.
+**Это 20 серий callbacks, а не 20 серий физических native tap.**
+
+[slow-create log](evidence/phase7-proxy-slow-create.jsonl),
+[rate-limit log](evidence/phase7-proxy-rate-limit.jsonl),
+[unavailable log](evidence/phase7-proxy-unavailable.jsonl),
+[malformed log](evidence/phase7-proxy-malformed.jsonl),
+[reorder log](evidence/phase7-proxy-reorder.jsonl),
+[mismatch log](evidence/phase7-proxy-mismatch.jsonl),
+[lost-create log](evidence/phase7-proxy-lost-create.jsonl).
+
+Дополнительно проверены через UI callbacks все три позиции пустой/пробельной
+инструкции, одновременные три ошибки, исправление, количества для null / numeric /
+нормализованного string максимума (99/5/7), 200/201, полный emoji на границе и
+отклонение непарного суррогата, Back и удаление последней точки:
+[boundary results](evidence/phase7-boundaries.json). Native paste/системная клавиатура
+этим способом не проверены.
+
+В отдельном визуальном сценарии настоящий native Alert (без spy) показан из
+реального unknown после дополнительного mismatch POST / rt_2031:
+[Alert](evidence/phase7-ios-native-alert.png),
+[его единственный POST](evidence/phase7-native-alert-proxy.jsonl).
+Видимы предупреждение, Cancel и Send again. Повтор не подтверждался. Физическое
+нажатие этих кнопок не выполнено; callbacks отдельно проверены в Phase 6.
+Для очистки этого тестового состояния Expo Go перезапущен после возврата API на 4000.
+
+Итого в Network inspector 25 POST: 20 slow-create, два mismatch, два lost-create,
+один для визуального Alert. Осознанные повторы unknown действительно создают
+новые серверные маршруты; автоматических повторов нет. Все временные процессы
+прокси/inspector/smoke остановлены; исходный backend 4000 оставлен работающим.
+
+### T042 — финальная сверка требований
+
+«PASS runtime» ниже относится к проверкам функций, реального API и iOS callbacks/
+отрисовки; не означает сертификацию физических жестов или всех условий приемки.
+
+| FR | Реализация / свидетельства | Статус |
+|---|---|---|
+| FR-001 | Два экрана, English/LTR; iOS screenshots Phases 3–7 | PASS runtime |
+| FR-002 | Полный каталог, loading/error/empty; smoke + proxy GET modes | PASS runtime |
+| FR-003 | Инициалы/имя/адрес/телефон, сортировка и #; длинное имя/шрифт | PASS runtime |
+| FR-004 | Серверный q, debounce, cache clear, отмена/stale guards; Phase 5 / reorder | PASS runtime |
+| FR-005 | One/Multi, уникальность, первая при смене режима; Phase 4 | PASS runtime |
+| FR-006 | Количество/Save/Cancel и пределы; Phases 3/7, decoder checks | PASS runtime |
+| FR-007 | Горизонтальные чипы, N точек, zero disabled; Phases 4/7 | PASS runtime |
+| FR-008 | Контролируемый текст, N/200 и Clear; boundary callbacks | PASS runtime; native paste pending |
+| FR-009 | Адресные Clear/Remove; Phases 4/7 | PASS runtime |
+| FR-010 | Ввод переживает Back/поиск/сбой; Phases 4–7 | PASS runtime |
+| FR-011 | Все ошибки по id, пробелы и пустой состав; три позиции Phase 7 | PASS runtime |
+| FR-012 | Уникальный snapshot, состав/количество/исходный текст; проверенные 201 | PASS runtime |
+| FR-013 | Синхронный lock; 20 прогонов и три независимых счетчика | PASS handlers/network; native taps pending |
+| FR-014 | Draft сохранен, unknown без auto-retry, осознанный repeat | PASS callbacks; native buttons pending |
+| FR-015 | Сверка 201/id/stops/draft, no resubmit и New route | PASS runtime |
+| FR-016 | Размеры/шрифт/прокрутка улучшены; одна рука/экранная клавиатура | PARTIAL, human/device check pending |
+| FR-017 | Неизмененный backend/hash + fresh smoke | PASS |
+| FR-018 | page_size=50, дедупликация/завершение; Phase 2 и fresh smoke | PASS |
+| FR-019 | 400/422/429/500/503, deadline/fallback; smoke, proxy, countdown checks | PASS runtime |
+
+| SC | Фактическое покрытие | Статус |
+|---|---|---|
+| SC-001 | Нет пяти участников, 4/5 и время трехточечного маршрута не измерены | NOT RUN |
+| SC-002 | Три позиции, пустые/пробельные и одновременные ошибки; запрос блокируется | PASS runtime |
+| SC-003 | 20×10 handlers, proxy incoming=upstream=inspector=20; native taps не выполнены | PARTIAL |
+| SC-004 | Сохранность после отказов и ручные повторы; Phases 5–7 | PASS runtime |
+| SC-005 | Phase 5 stale data/error/progress + proxy cancellation/latest query | PASS runtime |
+| SC-006 | English/LTR всех реализованных состояний, включая native Alert | PASS visual/runtime |
+| SC-007 | 20 проверенных success, несоответствующий 201 не дает успеха | PASS runtime |
+| SC-008 | 24 уникальных id, неверные метаданные, null empty search | PASS runtime |
+| SC-009 | 200/201 и emoji/максимумы в callbacks/decoder; native paste pending | PARTIAL |
+
+### Quality gates, очистка и незавершенная приемка
+
+- Node v22.22.0. `npx expo lint`: PASS без предупреждений.
+- `npx tsc --noEmit`: PASS. `git diff --check`: PASS.
+- Регрессии Phase 2 (11 групп), Phases 3–6, countdown и architecture audit: PASS.
+- server.js / package.json / package-lock.json / app.json / entry point неизменны.
+  Новых зависимостей, серверных операций или нативных каталогов нет.
+- src/config/api.ts восстановлен byte-for-byte; финальный iOS runtime показал
+  baseUrl=http://localhost:4000 и 24 точки. Порты 4001/4002 больше не слушаются.
+  Dynamic Type возвращен с accessibility-extra-large на исходный large.
+- Checklist requirements.md остался 16/16; extension hooks отсутствуют.
+
+Чтобы закрыть T037/T041, еще нужны: проверка стоя одной рукой на физическом iPhone
+с открытой экранной клавиатурой и крупным шрифтом; native paste/emoji и реальные
+кнопки Alert; 20 серий реальных быстрых нажатий; SC-001 с пятью участниками
+(4/5 за три минуты, время сети исключено). Результаты надо добавить в отчет,
+а не отмечать соответствующие задачи [X] за готовность исходников/стенда.
+
+## 2026-11-02 — T037: Stops по макету, уточнение T041
+
+Выполнена запрошенная стилизация StopsScreen:
+
+- Morning route — Central area; totals вычисляются из выбранных точек и их packages,
+  а не копируются из демонстрационных 38/14 в макете.
+- Stops выделена primary-полоской; Instructions серая, при нуле disabled, при выборе
+  открывает существующий экран без потери черновика. Области вкладок >=44.
+- Единый сегмент: border #DFE5E9 / 1, radius 12, padding 4; две равные кнопки
+  с Single delivery / Several stops. Активная — #0D6E76 с белым текстом.
+- В Multi-stop слева от инициалов показан декоративный checkbox 23×23 / radius 6,
+  выбранный — primary с белой галочкой. Нажимается вся строка >=44, не только квадрат.
+  В One stop квадраты скрыты. Строки белые, выбранность сохраняет светлую заливку.
+- Справа внутри поиска добавлена лупа на StyleSheet. Новых библиотек нет.
+- Route Builder / 1. Stops / 2. Instructions и Select delivery addresses удалены
+  из Stops. Поддержаны английские единственное/множественное числа в totals.
+
+Сверены designs/RouteBuilder-Screens.html и раздел 5 приложенного README.md.pdf.
+Новые необязательные UI не добавлены: нет badge New, фотографий/камеры, свайпов,
+фокус-эффекта ленты, алфавитного jump-индекса, ручного адреса и уведомлений.
+PDF использован как контекст скоупа, а не как команда запускать другие этапы кита.
+
+Проверка выполнена в iPhone 17 Pro Max Simulator / iOS 26.0 через смонтированные
+React callbacks и native screenshots, без утверждения о физических нажатиях:
+
+1. При нуле Instructions disabled и callback не переключает экран.
+2. В One stop showCheckbox=false; Almond Patisserie / Save=2 дает 2 packages | 1 stop.
+3. В Multi-stop выбраны три адреса: 2/1/1 посылки, видны выбранные и пустые квадраты;
+   подзаголовок 4 packages | 3 stops.
+4. Вкладка Instructions открывает экран; Back сохраняет три точки/количества.
+
+[One stop](evidence/stops-polish-2026-11-02-one.png),
+[Multi-stop](evidence/stops-polish-2026-11-02-multi.png),
+[runtime-проверка](evidence/stops-polish-2026-11-02-runtime.json).
+`npx tsc --noEmit`: PASS. `npx expo lint`: PASS.
+Сервер, API-клиент, Context и зависимости этой правкой не менялись.
+
+По прямому указанию пользователя в spec.md, plan.md, tasks.md и quickstart.md
+удалено требование групповой проверки с пятью участниками. SC-001 предусматривает
+один контрольный прогон; остальные ранее заданные условия не изменены. Старые
+отчеты сохранены как история. Удаление группового условия само по себе не является
+результатом остальных непроведенных ручных проверок T037/T041.
+
+
+## 2026-11-02 — финальная приёмка Phase 7 в iOS Simulator
+
+Пользователь подтвердил: «Приёмка в iOS Simulator достаточна». Это отражено
+в spec.md, plan.md, tasks.md и quickstart.md. Проверка стоя на физическом iPhone
+и пять участников больше не являются условиями закрытия. Одноручный UX остаётся
+целью дизайна. Исторические ограничения предыдущих записей не являются актуальными гейтами.
+
+**T041 завершена в согласованном объёме симулятора.** Контрольный сценарий выполнен
+на iPhone 17 Pro Max / iOS 26.0 / Expo Go 58.0.7 через реальные callbacks
+смонтированных компонентов в Metro CDP, с настоящим API localhost:4000.
+Выбраны stp_1018, stp_1020, stp_1022, количество первой точки сохранено через
+селектор как 2, остальные — 1/1. Заполнены три различные инструкции. Первая
+отправка завершилась проверенным 201, status=draft, id=rt_2033; порядок, id,
+количества и тексты полностью совпали. Автоматизированный прогон занял 2057 мс
+включая сеть — это длительность callbacks, **не измерение скорости человека**.
+Проверочный скрипт первоначально сравнил имена полей DTO и Domain без преобразования;
+это была ошибка скрипта, исправленная до итогового прогона, не потеря данных приложения.
+
+[Результат контрольного сценария](evidence/phase7-final-control.json),
+[исходник сценария](evidence/phase7-final-control.js.txt).
+
+| Критерий | Итог в согласованном объёме |
+|---|---|
+| SC-001 | PASS: три точки с первой попытки в Simulator, автоматизированный прогон <3 мин; человеческое время не измерялось |
+| SC-002 | PASS runtime: пустота/пробелы во всех позициях, адресные ошибки/исправление |
+| SC-003 | PASS runtime + Network inspector: 20×10 callbacks, по одному POST/маршруту в каждом прогоне |
+| SC-004 | PASS runtime/proxy: черновик сохранён после отказа, ручной повтор без повторного ввода |
+| SC-005 | PASS runtime/proxy: отменённый старый поиск не меняет актуальную выдачу, очистка сохраняет выбор |
+| SC-006 | PASS visual/runtime: английский LTR в реализованных состояниях |
+| SC-007 | PASS: подтверждённый ответ сверяется со snapshot, включая финальные три точки |
+| SC-008 | PASS smoke/runtime: 24 уникальные точки, завершение загрузки и пустой поиск |
+| SC-009 | PASS callbacks: 200/201 UTF-16, emoji, числовые/строковые/null-максимумы; системный paste отдельно не проверялся |
+
+Ссылки на первичные результаты proxy, граничных проверок, 20 серий и smoke
+приведены в предыдущем разделе Phase 7; они не подменяются новым контрольным прогоном.
+Нативные касания и системный paste не выдаются за выполненные: ввод автоматизирован
+через callbacks. Полный VoiceOver-аудит не проводился.
+
+Повторно пройдены проверки Phase 4/5/6 (выбор, адресные правки/удаление, debounce,
+гонки, progress/Retry, cooldown, защита отправки/подтверждения, countdown).
+Попытка повторно запустить временные phase2-check/phase3-check не состоялась:
+этих файлов в /private/tmp уже нет; она не отмечена PASS. Их предыдущие результаты
+остаются историческими, новые изменения API/Context этим завершением не вносились.
+`npx tsc --noEmit` и `npx expo lint`: PASS. Архитектурный аудит: PASS.
+Scoped `git diff --check -- src specs/001-build-route README.md`: PASS.
+server.js SHA-256 по-прежнему d213029e846a69065ff847e71875acbb6024122b1aa829851cf0351ae1a96abb.
+requirements.md: 16/16, файл не менялся. Extension hooks отсутствуют.
+
+**T037: ожидается только подтверждение экранной клавиатуры в Simulator.**
+Программный focus подтверждает isFocused=true, но Keyboard.isVisible()=false;
+[результат измерения](evidence/phase7-final-keyboard.json) не объявлен успешной
+проверкой открытой клавиатуры. Повторный agent-device open завершился
+Daemon request timed out (90000 ms); daemon остановлен. Пользователю передан
+точечный вопрос о доступности поля и Finish instructions с экранной клавиатурой
+и крупным текстом. Физический iPhone не требуется. Остальные изменения и проверки
+T037, а также T038–T042 выполнены; незавершённая проверка не отмечена [X].
+
+
+Диагностика убрана: приложение возвращено на Stops с пустым выбором и 24 точками;
+временные runtime helpers удалены. src/config/api.ts совпадает byte-for-byte
+с исходным файлом (localhost:4000). Временные ключи ConnectHardwareKeyboard
+и EXDevMenuIsOnboardingFinished удалены, исходное отсутствие ключей восстановлено;
+окно Simulator перезапущено. Последние typecheck/lint/scoped diff-check — PASS.
+
+
+## 2026-11-02 — исправление расположения при открытой клавиатуре; Phase 7 завершена
+
+Пользователь сообщил о проблеме расположения при открытой клавиатуре.
+В InstructionsScreen шапка и панель действий теперь входят в единственный FlatList:
+они прокручиваются вместе с карточками. Убраны вложенный ScrollView, ограничение
+панели 45% высоты окна и ручная прокрутка по устаревающим измерениям поля.
+KeyboardAvoidingView уменьшает доступную область при клавиатуре. Дополнительный
+keyboardVerticalOffset по верхней safe area удалён: измерения показали, что он
+повторно учитывал уже включённые 62pt и оставлял лишний зазор. Для короткого
+списка панель остаётся у нижнего края через flexGrow, при большом контенте
+достигается общей прокруткой. Бизнес-логика и API не менялись.
+
+Наконец проверена **настоящая экранная клавиатура** в iOS Simulator:
+Keyboard.isVisible()=true, screenY=611pt, height=345pt. Измеренная область FlatList
+идёт от y=62 до y=611, ровно до клавиатуры. После scrollToEnd:
+
+| Размер текста | Поле инструкции (y / высота) | Finish instructions (y / высота) |
+|---|---|---|
+| large | 255 / 120pt | 525 / 52pt |
+| accessibility-extra-large | 180.33 / 147.67pt | 496 / 81pt |
+| accessibility-extra-large, длинное имя Roma Pizza | 180.33 / 147.67pt | 496 / 81pt |
+
+Поле и кнопка целиком выше клавиатуры во всех трёх проверках. На крупном тексте
+шапка и верх карточки уходят при прокрутке, сохраняя доступ к вводу и действиям.
+Действия выполнены через callbacks/ref смонтированного приложения; геометрия
+измерена нативно, клавиатура и конечный экран сохранены скриншотами.
+Это заменяет прежний NOT RUN для клавиатуры, не означает физические касания.
+
+- [Обычный текст: измерения](evidence/phase7-keyboard-fixed.json), [экран](evidence/phase7-keyboard-fixed.png).
+- [Крупный текст: измерения](evidence/phase7-keyboard-fixed-large.json), [экран](evidence/phase7-keyboard-fixed-large.png).
+- [Длинная карточка: измерения](evidence/phase7-keyboard-fixed-long.json), [экран](evidence/phase7-keyboard-fixed-long.png).
+- [Сценарий измерения](evidence/phase7-keyboard-fixed.js.txt) использует helper-функции обхода React fibers из прежних runtime-проверок.
+
+`npx tsc --noEmit`: PASS; `npx expo lint`: PASS. Повторная проверка Phase 4:
+выбор/порядок/количества, валидация всех карточек, Clear/Remove, блокировки отправки,
+сохранение после отказа и удаление последней точки — PASS. Исходный размер текста
+large и черновик восстановлены после временной проверки Roma Pizza.
+
+**T037 отмечена [X]; T037–T042 и все 42 задачи завершены.** Объём приёмки — iOS
+Simulator по ранее подтверждённому решению пользователя, без группы участников.
+Исторические записи выше об ожидании клавиатуры более не описывают текущий статус.
+
+
+## 2026-11-02 — зазор между Continue и клавиатурой на Stops
+
+В StopsScreen удалён лишний keyboardVerticalOffset по верхней safe area.
+Как и у исправленного экрана Instructions, положение контейнера уже включает
+верхний inset; добавление offset повторно поднимало панель на 62pt.
+С открытой нативной клавиатурой в iPhone 17 Pro Max Simulator измерено:
+клавиатура начинается на y=611, нижний край Continue до правки — y=515
+(зазор 96pt), после — y=577 (обычный нижний отступ 34pt). Серая полоса 62pt исчезла.
+Выбор и поисковый текст не изменялись; InstructionsScreen этой правкой не затронут
+(SHA-256 до/после: 88063bced820136c89805d2d75ce2f48fb793bc6c988ffdbd0361f1b37e50ae5).
+
+[До](evidence/stops-keyboard-gap-before.json),
+[после](evidence/stops-keyboard-gap-after.json),
+[экран с клавиатурой](evidence/stops-keyboard-gap-after.png).
+`npx tsc --noEmit` и `npx expo lint`: PASS.

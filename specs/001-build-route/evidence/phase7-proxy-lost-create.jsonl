@@ -1,0 +1,11 @@
+{"time":"2026-10-29T12:31:00.627Z","mode":"lost-create","incomingPosts":0,"upstreamPosts":0,"event":"listening","port":4001}
+{"time":"2026-10-29T12:31:01.141Z","mode":"lost-create","incomingPosts":1,"upstreamPosts":0,"number":1,"method":"POST","pathname":"/v1/routes","event":"received"}
+{"time":"2026-10-29T12:31:01.152Z","mode":"lost-create","incomingPosts":1,"upstreamPosts":1,"number":1,"method":"POST","pathname":"/v1/routes","event":"upstream","code":201}
+{"time":"2026-10-29T12:31:11.149Z","mode":"lost-create","incomingPosts":1,"upstreamPosts":1,"number":1,"method":"POST","pathname":"/v1/routes","event":"client_cancelled"}
+{"time":"2026-10-29T12:31:13.155Z","mode":"lost-create","incomingPosts":1,"upstreamPosts":1,"number":1,"method":"POST","pathname":"/v1/routes","event":"not_delivered","code":201,"applied":true}
+{"time":"2026-10-29T12:31:13.605Z","mode":"lost-create","incomingPosts":2,"upstreamPosts":1,"number":2,"method":"POST","pathname":"/v1/routes","event":"received"}
+{"time":"2026-10-29T12:31:13.607Z","mode":"lost-create","incomingPosts":2,"upstreamPosts":2,"number":2,"method":"POST","pathname":"/v1/routes","event":"upstream","code":201}
+{"time":"2026-10-29T12:31:13.607Z","mode":"lost-create","incomingPosts":2,"upstreamPosts":2,"number":2,"method":"POST","pathname":"/v1/routes","event":"delivered","code":201,"applied":false}
+{"time":"2026-10-29T12:33:59.685Z","mode":"lost-create","incomingPosts":2,"upstreamPosts":2,"number":3,"method":"GET","pathname":"/v1/stops","event":"received"}
+{"time":"2026-10-29T12:33:59.703Z","mode":"lost-create","incomingPosts":2,"upstreamPosts":2,"number":3,"method":"GET","pathname":"/v1/stops","event":"upstream","code":200}
+{"time":"2026-10-29T12:33:59.715Z","mode":"lost-create","incomingPosts":2,"upstreamPosts":2,"number":3,"method":"GET","pathname":"/v1/stops","event":"delivered","code":200,"applied":false}

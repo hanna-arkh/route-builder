@@ -1,0 +1,128 @@
+{
+  "runs": [
+    {
+      "handlers": 10,
+      "id": "rt_2007",
+      "run": 1,
+      "status": "success"
+    },
+    {
+      "handlers": 10,
+      "id": "rt_2008",
+      "run": 2,
+      "status": "success"
+    },
+    {
+      "handlers": 10,
+      "id": "rt_2009",
+      "run": 3,
+      "status": "success"
+    },
+    {
+      "handlers": 10,
+      "id": "rt_2010",
+      "run": 4,
+      "status": "success"
+    },
+    {
+      "handlers": 10,
+      "id": "rt_2011",
+      "run": 5,
+      "status": "success"
+    },
+    {
+      "handlers": 10,
+      "id": "rt_2012",
+      "run": 6,
+      "status": "success"
+    },
+    {
+      "handlers": 10,
+      "id": "rt_2013",
+      "run": 7,
+      "status": "success"
+    },
+    {
+      "handlers": 10,
+      "id": "rt_2014",
+      "run": 8,
+      "status": "success"
+    },
+    {
+      "handlers": 10,
+      "id": "rt_2015",
+      "run": 9,
+      "status": "success"
+    },
+    {
+      "handlers": 10,
+      "id": "rt_2016",
+      "run": 10,
+      "status": "success"
+    },
+    {
+      "handlers": 10,
+      "id": "rt_2017",
+      "run": 11,
+      "status": "success"
+    },
+    {
+      "handlers": 10,
+      "id": "rt_2018",
+      "run": 12,
+      "status": "success"
+    },
+    {
+      "handlers": 10,
+      "id": "rt_2019",
+      "run": 13,
+      "status": "success"
+    },
+    {
+      "handlers": 10,
+      "id": "rt_2020",
+      "run": 14,
+      "status": "success"
+    },
+    {
+      "handlers": 10,
+      "id": "rt_2021",
+      "run": 15,
+      "status": "success"
+    },
+    {
+      "handlers": 10,
+      "id": "rt_2022",
+      "run": 16,
+      "status": "success"
+    },
+    {
+      "handlers": 10,
+      "id": "rt_2023",
+      "run": 17,
+      "status": "success"
+    },
+    {
+      "handlers": 10,
+      "id": "rt_2024",
+      "run": 18,
+      "status": "success"
+    },
+    {
+      "handlers": 10,
+      "id": "rt_2025",
+      "run": 19,
+      "status": "success"
+    },
+    {
+      "handlers": 10,
+      "id": "rt_2026",
+      "run": 20,
+      "status": "success"
+    }
+  ],
+  "incomingPosts": 20,
+  "upstreamPosts": 20,
+  "inspectorPosts": 20,
+  "method": "10 UI handler invocations in one tick per run; not physical native taps"
+}

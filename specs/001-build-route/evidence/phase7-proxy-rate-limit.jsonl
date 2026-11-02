@@ -1,0 +1,6 @@
+{"time":"2026-10-29T12:23:36.274Z","mode":"rate-limit","incomingPosts":0,"upstreamPosts":0,"event":"listening","port":4001}
+{"time":"2026-10-29T12:25:45.122Z","mode":"rate-limit","incomingPosts":0,"upstreamPosts":0,"number":1,"method":"GET","pathname":"/v1/stops","event":"received"}
+{"time":"2026-10-29T12:25:45.128Z","mode":"rate-limit","incomingPosts":0,"upstreamPosts":0,"number":1,"method":"GET","pathname":"/v1/stops","event":"delivered","code":429,"applied":true}
+{"time":"2026-10-29T12:25:48.223Z","mode":"rate-limit","incomingPosts":0,"upstreamPosts":0,"number":2,"method":"GET","pathname":"/v1/stops","event":"received"}
+{"time":"2026-10-29T12:25:48.231Z","mode":"rate-limit","incomingPosts":0,"upstreamPosts":0,"number":2,"method":"GET","pathname":"/v1/stops","event":"upstream","code":200}
+{"time":"2026-10-29T12:25:48.231Z","mode":"rate-limit","incomingPosts":0,"upstreamPosts":0,"number":2,"method":"GET","pathname":"/v1/stops","event":"delivered","code":200,"applied":false}

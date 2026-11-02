@@ -1,0 +1,7 @@
+{
+  "confirmation": "explicit driver call; not native Alert",
+  "mode": "lost-create",
+  "receivedRouteId": null,
+  "recoveredId": "rt_2030",
+  "unknownKind": "timeout"
+}

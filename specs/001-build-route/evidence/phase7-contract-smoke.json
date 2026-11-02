@@ -1,0 +1,157 @@
+{
+  "port": 4002,
+  "server": "unchanged server.js",
+  "groups": [
+    {
+      "name": "contract",
+      "ids": [
+        "stp_1000",
+        "stp_1001",
+        "stp_1002",
+        "stp_1003",
+        "stp_1004",
+        "stp_1005",
+        "stp_1006",
+        "stp_1007",
+        "stp_1008",
+        "stp_1009",
+        "stp_1010",
+        "stp_1011",
+        "stp_1012",
+        "stp_1013",
+        "stp_1014",
+        "stp_1015",
+        "stp_1016",
+        "stp_1017",
+        "stp_1018",
+        "stp_1019",
+        "stp_1020",
+        "stp_1021",
+        "stp_1022",
+        "stp_1023"
+      ],
+      "metadata": {
+        "total": 25,
+        "total_pages": 0,
+        "has_more": true
+      },
+      "northId": "stp_1001",
+      "missingItems": null,
+      "lowercaseItems": null,
+      "badJson": {
+        "status": 400,
+        "retryAfter": null,
+        "data": {
+          "error": "malformed_json"
+        }
+      },
+      "emptyStops": {
+        "status": 422,
+        "retryAfter": null,
+        "data": {
+          "error": "validation_failed",
+          "fields": {
+            "stops": "required"
+          }
+        }
+      },
+      "valid": {
+        "status": 201,
+        "retryAfter": null,
+        "data": {
+          "id": "rt_2000",
+          "stops": [
+            {
+              "stop_id": "stp_1001",
+              "packages": 2,
+              "instructions": "Use the main entrance"
+            }
+          ],
+          "status": "draft"
+        }
+      },
+      "serverInstructionLimit": 200
+    },
+    {
+      "name": "deterministic failures",
+      "sequence": [
+        {
+          "request": 1,
+          "status": 200
+        },
+        {
+          "request": 2,
+          "status": 200
+        },
+        {
+          "request": 3,
+          "status": 200
+        },
+        {
+          "request": 4,
+          "status": 200
+        },
+        {
+          "request": 5,
+          "status": 200
+        },
+        {
+          "request": 6,
+          "status": 200
+        },
+        {
+          "request": 7,
+          "status": 200
+        },
+        {
+          "request": 8,
+          "status": 200
+        },
+        {
+          "request": 9,
+          "status": 500,
+          "retryAfter": null,
+          "body": {
+            "error": "internal_error",
+            "request_id": "req_9"
+          }
+        },
+        {
+          "request": 10,
+          "status": 200
+        },
+        {
+          "request": 11,
+          "status": 200
+        },
+        {
+          "request": 12,
+          "status": 200
+        },
+        {
+          "request": 13,
+          "status": 200
+        },
+        {
+          "request": 14,
+          "status": 503,
+          "retryAfter": "2",
+          "body": {
+            "error": "upstream_unavailable"
+          }
+        }
+      ]
+    },
+    {
+      "name": "rate limit",
+      "requests": 31,
+      "last": {
+        "status": 429,
+        "retryAfter": "58",
+        "data": {
+          "error": "rate_limited"
+        }
+      }
+    }
+  ]
+}

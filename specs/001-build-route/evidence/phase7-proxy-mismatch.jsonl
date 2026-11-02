@@ -1,0 +1,7 @@
+{"time":"2026-10-29T12:30:58.592Z","mode":"mismatch","incomingPosts":0,"upstreamPosts":0,"event":"listening","port":4001}
+{"time":"2026-10-29T12:30:59.091Z","mode":"mismatch","incomingPosts":1,"upstreamPosts":0,"number":1,"method":"POST","pathname":"/v1/routes","event":"received"}
+{"time":"2026-10-29T12:30:59.102Z","mode":"mismatch","incomingPosts":1,"upstreamPosts":1,"number":1,"method":"POST","pathname":"/v1/routes","event":"upstream","code":201}
+{"time":"2026-10-29T12:30:59.103Z","mode":"mismatch","incomingPosts":1,"upstreamPosts":1,"number":1,"method":"POST","pathname":"/v1/routes","event":"delivered","code":201,"applied":true}
+{"time":"2026-10-29T12:30:59.649Z","mode":"mismatch","incomingPosts":2,"upstreamPosts":1,"number":2,"method":"POST","pathname":"/v1/routes","event":"received"}
+{"time":"2026-10-29T12:30:59.651Z","mode":"mismatch","incomingPosts":2,"upstreamPosts":2,"number":2,"method":"POST","pathname":"/v1/routes","event":"upstream","code":201}
+{"time":"2026-10-29T12:30:59.651Z","mode":"mismatch","incomingPosts":2,"upstreamPosts":2,"number":2,"method":"POST","pathname":"/v1/routes","event":"delivered","code":201,"applied":false}

@@ -1,0 +1,18 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),{spawn}=require('node:child_process');
+const port=4002,base='http://127.0.0.1:'+port,report={port,server:'unchanged server.js',groups:[]};
+let child;
+async function fresh(){
+ if(child){child.kill('SIGTERM');await new Promise(resolve=>child.once('exit',resolve));}
+ child=spawn(process.execPath,['server.js',String(port)],{cwd:process.cwd(),stdio:['ignore','pipe','pipe']});
+ await new Promise((resolve,reject)=>{child.stdout.once('data',resolve);child.once('error',reject);child.once('exit',code=>reject(new Error('server exited '+code)));});
+}
+async function request(path,body,raw=false){const r=await fetch(base+path,body===undefined?undefined:{method:'POST',headers:{'Content-Type':'application/json'},body:raw?body:JSON.stringify(body)});return {status:r.status,retryAfter:r.headers.get('retry-after'),data:await r.json()};}
+(async()=>{
+ await fresh();const browse=await request('/v1/stops?page=1&page_size=50');assert.equal(browse.status,200);assert.equal(browse.data.items.length,24);assert.equal(new Set(browse.data.items.map(x=>x.id)).size,24);assert.equal(browse.data.total,25);assert.equal(browse.data.total_pages,0);assert.equal(browse.data.has_more,true);
+ const north=await request('/v1/stops?page=1&page_size=50&q=North%20Cafe');assert.equal(north.data.items[0].id,'stp_1001');const missing=await request('/v1/stops?page=1&page_size=50&q=zzzzzz');assert.equal(missing.data.items,null);const lower=await request('/v1/stops?page=1&page_size=50&q=north%20cafe');assert.equal(lower.data.items,null);
+ const bad=await request('/v1/routes','{',true);assert.equal(bad.status,400);assert.equal(bad.data.error,'malformed_json');const empty=await request('/v1/routes',{stops:[]});assert.equal(empty.status,422);assert.equal(empty.data.fields.stops,'required');const valid=await request('/v1/routes',{stops:[{stop_id:'stp_1001',packages:2,instructions:'Use the main entrance'}]});assert.equal(valid.status,201);assert.equal(valid.data.status,'draft');assert.equal(valid.data.id,'rt_2000');const long=await request('/v1/routes',{stops:[{stop_id:'stp_1001',packages:1,instructions:'x'.repeat(201)}]});assert.equal(long.data.stops[0].instructions.length,200);
+ report.groups.push({name:'contract',ids:browse.data.items.map(x=>x.id),metadata:{total:browse.data.total,total_pages:browse.data.total_pages,has_more:browse.data.has_more},northId:north.data.items[0].id,missingItems:missing.data.items,lowercaseItems:lower.data.items,badJson:bad,emptyStops:empty,valid,serverInstructionLimit:long.data.stops[0].instructions.length});
+ await fresh();let sequence=[];for(let i=1;i<=14;i++){const r=await request('/v1/stops?page=1&page_size=50');sequence.push({request:i,status:r.status,...(r.status!==200?{retryAfter:r.retryAfter,body:r.data}:{})});}assert.equal(sequence[8].status,500);assert.equal(sequence[8].body.request_id,'req_9');assert.equal(sequence[13].status,503);assert.equal(sequence[13].retryAfter,'2');report.groups.push({name:'deterministic failures',sequence});
+ await fresh();let last;for(let i=1;i<=31;i++)last=await request('/v1/stops?page=1&page_size=50');assert.equal(last.status,429);assert.equal(last.data.error,'rate_limited');assert(Number(last.retryAfter)>0);report.groups.push({name:'rate limit',requests:31,last});
+ fs.writeFileSync('specs/001-build-route/evidence/phase7-contract-smoke.json',JSON.stringify(report,null,2)+'\n');console.log('PASS fresh server contract: 24 unique stops, metadata/null/case, 400/422/201, truncation 200 UTF-16; fresh seq 9=500/14=503; fresh request 31=429 with Retry-After');
+})().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>child?.kill('SIGTERM'));

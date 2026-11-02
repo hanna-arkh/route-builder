@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState, type ComponentRef } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { validInstructionInput } from "../context/validation";
 import type { SelectedStop } from "../types/domain";
@@ -11,6 +11,8 @@ export function InstructionCard({
   onChange,
   onClear,
   onRemove,
+  onFocus,
+  onBlur,
 }: {
   item: SelectedStop;
   error?: string;
@@ -18,7 +20,10 @@ export function InstructionCard({
   onChange: (text: string) => void;
   onClear: () => void;
   onRemove?: () => void;
+  onFocus?: (input: ComponentRef<typeof TextInput> | null) => void;
+  onBlur?: () => void;
 }) {
+  const input = useRef<ComponentRef<typeof TextInput>>(null);
   const [inputError, setInputError] = useState<string | null>(null);
   const message = error || inputError;
   return (
@@ -29,8 +34,9 @@ export function InstructionCard({
       </View>
       <Text style={styles.address}>{item.stop.address}</Text>
       <TextInput
+        ref={input}
         accessibilityLabel={`Instructions for ${item.stop.name || "Unknown stop"}`}
-        accessibilityHint="Required. Maximum 200 characters."
+        accessibilityHint={message || "Required. Maximum 200 characters."}
         accessibilityState={{ disabled }}
         editable={!disabled}
         multiline
@@ -38,6 +44,8 @@ export function InstructionCard({
         value={item.instructions}
         placeholder="Add delivery instructions…"
         placeholderTextColor={theme.colors.textSecondary}
+        onFocus={() => onFocus?.(input.current)}
+        onBlur={onBlur}
         onChangeText={(text) => {
           if (!validInstructionInput(text)) {
             setInputError(
@@ -51,6 +59,7 @@ export function InstructionCard({
         style={[styles.input, !!message && styles.invalidInput]}
         textAlignVertical="top"
       />
+      {item.instructions.length === 200 && !message && <Text style={styles.counter}>Character limit reached (200).</Text>}
       {!!message && (
         <Text accessibilityRole="alert" style={styles.error}>
           {message}
@@ -98,12 +107,13 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
   },
   name: { ...theme.typography.label, color: theme.colors.text, flex: 1 },
-  quantity: { ...theme.typography.label, color: theme.colors.primary },
+  quantity: { ...theme.typography.label, color: theme.colors.primary, flexShrink: 0 },
   address: { ...theme.typography.body, color: theme.colors.textSecondary },
   input: {
     ...theme.typography.body,

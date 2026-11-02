@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { validPackages } from "../context/validation";
 import type { SelectedStop } from "../types/domain";
 import { theme } from "./theme";
@@ -15,6 +16,7 @@ export function PackageQuantityModal({
   onSave: (quantity: number) => void;
   onClose: () => void;
 }) {
+  const { bottom } = useSafeAreaInsets();
   const [quantity, setQuantity] = useState(item.packages);
   const canDecrease = !disabled && validPackages(item.stop, quantity - 1);
   const canIncrease = !disabled && validPackages(item.stop, quantity + 1);
@@ -27,7 +29,7 @@ export function PackageQuantityModal({
           style={StyleSheet.absoluteFill}
           onPress={onClose}
         />
-        <View accessibilityViewIsModal style={styles.sheet}>
+        <ScrollView accessibilityViewIsModal style={styles.sheetScroll} contentContainerStyle={[styles.sheet, { paddingBottom: Math.max(24, bottom) }]} bounces={false}>
           <Text accessibilityRole="header" style={styles.heading}>
             Number of packages
           </Text>
@@ -75,7 +77,7 @@ export function PackageQuantityModal({
           >
             <Text style={styles.text}>Cancel</Text>
           </Pressable>
-        </View>
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -86,6 +88,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#00000066",
     justifyContent: "flex-end",
   },
+  sheetScroll: { flexGrow: 0, maxHeight: "90%", backgroundColor: theme.colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
   sheet: {
     backgroundColor: theme.colors.surface,
     borderTopLeftRadius: 24,

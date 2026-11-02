@@ -97,6 +97,7 @@ export function InstructionsScreen({
   };
   const remove = (id: string) => {
     if (isInteractionLocked()) return;
+    Keyboard.dismiss();
     removeStop(id);
     if (draft.selected.length === 1) {
       Keyboard.dismiss();
@@ -108,34 +109,38 @@ export function InstructionsScreen({
       style={styles.screen}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <View style={styles.header}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ disabled: locked }}
-          disabled={locked}
-          onPress={() => {
-            Keyboard.dismiss();
-            onBack();
-          }}
-          style={styles.back}
-        >
-          <Text style={[styles.link, locked && styles.dim]}>
-            ‹ Back to Stops
-          </Text>
-        </Pressable>
-        <Text accessibilityRole="header" style={styles.heading}>
-          Instructions
-        </Text>
-        <Text style={styles.subtitle}>Add instructions for every stop</Text>
-      </View>
       <FlatList
         ref={list}
+        style={styles.screen}
         data={draft.selected}
         keyExtractor={(item) => item.stop.id}
         extraData={submission}
         contentContainerStyle={styles.list}
+        contentInsetAdjustmentBehavior="never"
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ disabled: locked }}
+              disabled={locked}
+              onPress={() => {
+                Keyboard.dismiss();
+                onBack();
+              }}
+              style={styles.back}
+            >
+              <Text style={[styles.link, locked && styles.dim]}>
+                ‹ Back to Stops
+              </Text>
+            </Pressable>
+            <Text accessibilityRole="header" style={styles.heading}>
+              Instructions
+            </Text>
+            <Text style={styles.subtitle}>Add instructions for every stop</Text>
+          </View>
+        }
         onScrollToIndexFailed={({ averageItemLength }) => {
           const target = scrollTarget.current;
           if (!target || target.attempts >= 5) return;
@@ -160,59 +165,64 @@ export function InstructionsScreen({
           }, 150);
         }}
         renderItem={({ item }) => (
-          <InstructionCard
-            item={item}
-            error={errors[item.stop.id]}
-            disabled={locked}
-            onChange={(text) => setInstructions(item.stop.id, text)}
-            onClear={() => clearInstructions(item.stop.id)}
-            onRemove={() => remove(item.stop.id)}
-          />
+          <View style={styles.cardContainer}>
+            <InstructionCard
+              item={item}
+              error={errors[item.stop.id]}
+              disabled={locked}
+              onChange={(text) => setInstructions(item.stop.id, text)}
+              onClear={() => clearInstructions(item.stop.id)}
+              onRemove={() => remove(item.stop.id)}
+            />
+          </View>
         )}
-      />
-      <SafeAreaView edges={{ bottom: "maximum" }} style={styles.footer}>
-        {submission.status === "success" ? (
-          <RequestState
-            kind="success"
-            title="Route created"
-            message={`Route ID: ${submission.route.id}`}
-            actionLabel="New route"
-            onAction={onNewRoute}
-          />
-        ) : submission.status === "unknown" ? (
-          <RequestState
-            kind="error"
-            title="Route outcome unknown"
-            message={`Your route may already have been created. Repeating can create a duplicate. Your instructions are saved.${submission.receivedRouteId ? ` Received route ID: ${submission.receivedRouteId}. Its details could not be confirmed.` : ""}`}
-            retryAt={state.retryAt}
-            actionLabel="Retry"
-            onAction={confirmRetry}
-          />
-        ) : (
-          <>
-            {submission.status === "idle" &&
-              submission.validation.routeError && (
-                <Text accessibilityRole="alert" style={styles.error}>
-                  {submission.validation.routeError}
-                </Text>
-              )}
-            {submission.status === "sending" ? (
-              <RequestState kind="loading" title="Creating route…" />
-            ) : (
+        ListFooterComponentStyle={styles.footerContainer}
+        ListFooterComponent={
+          <SafeAreaView edges={{ bottom: "maximum" }} style={styles.footer}>
+            {submission.status === "success" ? (
               <RequestState
-                compact
-                kind={submission.status === "error" ? "error" : "idle"}
-                title={submission.status === "error" ? "Route was not created" : undefined}
-                message={submission.status === "error" ? rejectionMessage(submission.error) : undefined}
-                retryAt={state.retryAt}
-                actionLabel={submission.status === "error" ? "Retry" : "Finish instructions"}
-                onAction={finish}
-                disabled={locked}
+                kind="success"
+                title="Route created"
+                message={`Route ID: ${submission.route.id}`}
+                actionLabel="New route"
+                onAction={onNewRoute}
               />
+            ) : submission.status === "unknown" ? (
+              <RequestState
+                kind="error"
+                title="Route outcome unknown"
+                message={`Your route may already have been created. Repeating can create a duplicate. Your instructions are saved.${submission.receivedRouteId ? ` Received route ID: ${submission.receivedRouteId}. Its details could not be confirmed.` : ""}`}
+                retryAt={state.retryAt}
+                actionLabel="Retry"
+                onAction={confirmRetry}
+              />
+            ) : (
+              <>
+                {submission.status === "idle" &&
+                  submission.validation.routeError && (
+                    <Text accessibilityRole="alert" style={styles.error}>
+                      {submission.validation.routeError}
+                    </Text>
+                  )}
+                {submission.status === "sending" ? (
+                  <RequestState kind="loading" title="Creating route…" />
+                ) : (
+                  <RequestState
+                    compact
+                    kind={submission.status === "error" ? "error" : "idle"}
+                    title={submission.status === "error" ? "Route was not created" : undefined}
+                    message={submission.status === "error" ? rejectionMessage(submission.error) : undefined}
+                    retryAt={state.retryAt}
+                    actionLabel={submission.status === "error" ? "Retry" : "Finish instructions"}
+                    onAction={finish}
+                    disabled={locked}
+                  />
+                )}
+              </>
             )}
-          </>
-        )}
-      </SafeAreaView>
+          </SafeAreaView>
+        }
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -221,6 +231,7 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 16,
     paddingBottom: 16,
+    marginBottom: 16,
     backgroundColor: theme.colors.surface,
   },
   back: {
@@ -236,7 +247,11 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     marginTop: 4,
   },
-  list: { padding: 16, gap: 12 },
+  // Header and actions scroll too: large text must not consume the entire
+  // viewport above the keyboard. A short route still rests against the bottom.
+  list: { flexGrow: 1 },
+  cardContainer: { marginHorizontal: 16, marginBottom: 12 },
+  footerContainer: { flexGrow: 1, justifyContent: "flex-end" },
   footer: {
     padding: 16,
     backgroundColor: theme.colors.surface,

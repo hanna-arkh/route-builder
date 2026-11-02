@@ -7,6 +7,7 @@ interface Props {
   stop: Stop;
   packages?: number;
   disabled?: boolean;
+  showCheckbox?: boolean;
   onSelect: () => void;
   onQuantity: () => void;
 }
@@ -15,6 +16,7 @@ export const StopRow = memo(function StopRow({
   stop,
   packages,
   disabled = false,
+  showCheckbox = false,
   onSelect,
   onQuantity,
 }: Props) {
@@ -29,14 +31,19 @@ export const StopRow = memo(function StopRow({
     <View style={[styles.row, packages !== undefined && styles.selected]}>
       <Pressable
         accessibilityRole="checkbox"
-        accessibilityLabel={`${name}, ${stop.address}, ${stop.phone || "No phone"}`}
+        accessibilityLabel={`${name}, ${stop.address}, ${stop.phone.trim() || "No phone"}`}
         accessibilityState={{ checked: packages !== undefined, disabled }}
         disabled={disabled}
         onPress={onSelect}
         style={styles.select}
       >
+        {showCheckbox && (
+          <View accessible={false} style={[styles.checkbox, packages !== undefined && styles.checked]}>
+            {packages !== undefined && <View style={styles.checkmark} />}
+          </View>
+        )}
         <View style={styles.avatar}>
-          <Text style={styles.initials}>{initials}</Text>
+          <Text accessible={false} maxFontSizeMultiplier={1.5} style={styles.initials}>{initials}</Text>
         </View>
         <View style={styles.details}>
           <Text style={styles.name}>{name}</Text>
@@ -63,6 +70,7 @@ export const StopRow = memo(function StopRow({
 });
 const styles = StyleSheet.create({
   row: {
+    backgroundColor: theme.colors.surface,
     flexDirection: "row",
     alignItems: "center",
     borderBottomWidth: 1,
@@ -78,6 +86,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     minHeight: 44,
   },
+  checkbox: { width: 23, height: 23, borderRadius: 6, borderWidth: 1.5, borderColor: theme.colors.disabled, backgroundColor: theme.colors.surface, alignItems: "center", justifyContent: "center" },
+  checked: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
+  checkmark: { width: 7, height: 12, borderRightWidth: 2, borderBottomWidth: 2, borderColor: theme.colors.surface, transform: [{ rotate: "45deg" }], marginTop: -3 },
   avatar: {
     width: 44,
     height: 44,

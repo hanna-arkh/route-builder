@@ -1,0 +1,31 @@
+(async()=>{
+ const started=Date.now(); const events=[];
+ const pause=__finalPhase7Pause, ctx=__finalPhase7Context, find=__finalPhase7Find, assert=__finalPhase7Assert;
+ if(ctx().state.submission.status==='success'){find('RequestState').memoizedProps.onAction();await pause();}
+ if(find('InstructionsScreen')){find('InstructionsScreen').memoizedProps.onBack();await pause();}
+ for(const item of ctx().state.draft.selected)ctx().removeStop(item.stop.id);
+ ctx().setMode('multi');await pause();
+ const ids=['stp_1018','stp_1020','stp_1022'];
+ for(const id of ids){
+  const row=__finalPhase7Fibers().find(f=>__finalPhase7Name(f)==='StopRow'&&f.memoizedProps.stop.id===id);
+  assert(row,'visible StopRow '+id);row.memoizedProps.onSelect();await pause();
+ }
+ events.push({stage:'three selected',ms:Date.now()-started});
+ const first=__finalPhase7Fibers().find(f=>__finalPhase7Name(f)==='StopRow'&&f.memoizedProps.stop.id===ids[0]);
+ first.memoizedProps.onQuantity();await pause();
+ find('PackageQuantityModal').memoizedProps.onSave(2);await pause();
+ find('SelectionTray').memoizedProps.onContinue();await pause();
+ for(let i=0;i<3;i++){
+  const card=__finalPhase7Fibers().find(f=>__finalPhase7Name(f)==='InstructionCard'&&f.memoizedProps.item.stop.id===ids[i]);
+  assert(card,'InstructionCard '+ids[i]);card.memoizedProps.onChange('Leave parcel '+(i+1)+' with reception.');await pause();
+ }
+ const snapshot=ctx().state.draft.selected.map(x=>({stop_id:x.stop.id,packages:x.packages,instructions:x.instructions}));
+ events.push({stage:'instructions ready',ms:Date.now()-started});
+ find('RequestState').memoizedProps.onAction();await pause();
+ for(let i=0;i<80&&ctx().state.submission.status==='sending';i++)await pause();
+ const result=ctx().state.submission;
+ assert(result.status==='success','verified success: '+result.status);
+ assert(result.route.stops.every((stop,i)=>stop.stopId===snapshot[i].stop_id&&stop.packages===snapshot[i].packages&&stop.instructions===snapshot[i].instructions)&&result.route.stops.length===snapshot.length,'response exactly matches snapshot');
+ const elapsedMs=Date.now()-started;assert(elapsedMs<180000,'under three minutes');
+ return {method:'Mounted React UI callbacks via Metro CDP in iOS Simulator; no physical input timing claim',firstAttempt:true,elapsedMs,events,snapshot,submission:result,catalogue:ctx().state.catalogue.browse.length};
+})()

@@ -1,0 +1,7 @@
+{
+  "confirmation": "explicit driver call; not native Alert",
+  "mode": "mismatch",
+  "receivedRouteId": "rt_2027",
+  "recoveredId": "rt_2028",
+  "unknownKind": "protocol"
+}

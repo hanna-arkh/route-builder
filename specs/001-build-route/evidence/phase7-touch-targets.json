@@ -1,0 +1,70 @@
+{
+  "allAtLeast44": true,
+  "baseUrl": "http://localhost:4000",
+  "method": "native measurements from runtime",
+  "visibleTargets": [
+    {
+      "height": 52.00000762939453,
+      "role": "radio",
+      "width": 200,
+      "x": 16,
+      "y": 145.66666412353516
+    },
+    {
+      "height": 52.00000762939453,
+      "role": "radio",
+      "width": 200,
+      "x": 224,
+      "y": 145.66666412353516
+    },
+    {
+      "height": 85,
+      "role": "checkbox",
+      "width": 408,
+      "x": 16,
+      "y": 331.3333435058594
+    },
+    {
+      "height": 85,
+      "role": "checkbox",
+      "width": 408,
+      "x": 16,
+      "y": 417.3333435058594
+    },
+    {
+      "height": 84.99996948242188,
+      "role": "checkbox",
+      "width": 408,
+      "x": 16,
+      "y": 503.3333435058594
+    },
+    {
+      "height": 85,
+      "role": "checkbox",
+      "width": 408,
+      "x": 16,
+      "y": 621.6666870117188
+    },
+    {
+      "height": 85,
+      "role": "checkbox",
+      "width": 408,
+      "x": 16,
+      "y": 740
+    },
+    {
+      "height": 85,
+      "role": "checkbox",
+      "width": 408,
+      "x": 16,
+      "y": 858.3333129882812
+    },
+    {
+      "height": 52,
+      "role": "button",
+      "width": 408,
+      "x": 16,
+      "y": 870
+    }
+  ]
+}
